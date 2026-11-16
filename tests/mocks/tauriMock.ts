@@ -707,6 +707,107 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
       return true;
     }
 
+    case "create_task": {
+      const input = args.input;
+      const subtasksList = input.subtasks || [];
+      const newTask: TaskDetail = {
+        id: `task-${Date.now()}`,
+        title: input.title,
+        description: input.description,
+        categoryId: input.categoryId || "cat-1",
+        categoryName: "Deep Work",
+        categoryColor: "#14b8a6",
+        priority: input.priority || "medium",
+        status: "todo",
+        dueDate: input.dueDate,
+        isCompleted: false,
+        completedAt: undefined,
+        subtasksCount: subtasksList.length,
+        completedSubtasksCount: 0,
+      };
+      activeTasks.unshift(newTask);
+      return JSON.parse(JSON.stringify(newTask));
+    }
+
+    case "update_task": {
+      const input = args.input;
+      const task = activeTasks.find((t) => t.id === input.id);
+      if (task) {
+        task.title = input.title;
+        task.description = input.description;
+        task.priority = input.priority || task.priority;
+        task.dueDate = input.dueDate;
+        if (input.categoryId) task.categoryId = input.categoryId;
+      }
+      return true;
+    }
+
+    case "delete_task": {
+      const taskId = args.taskId ?? args.task_id;
+      const idx = activeTasks.findIndex((t) => t.id === taskId);
+      if (idx !== -1) {
+        activeTasks.splice(idx, 1);
+      }
+      return true;
+    }
+
+    case "get_subtasks": {
+      return [
+        {
+          id: "sub-1",
+          taskId: args.taskId ?? "task-1",
+          title: "Write integration tests",
+          isCompleted: true,
+          position: 0,
+        },
+        {
+          id: "sub-2",
+          taskId: args.taskId ?? "task-1",
+          title: "Verify SQLite persistence",
+          isCompleted: false,
+          position: 1,
+        },
+      ];
+    }
+
+    case "toggle_subtask_completion": {
+      return true;
+    }
+
+    case "add_subtask": {
+      return {
+        id: `sub-${Date.now()}`,
+        taskId: args.taskId,
+        title: args.title,
+        isCompleted: false,
+        position: 0,
+      };
+    }
+
+    case "delete_subtask": {
+      return true;
+    }
+
+    case "get_task_categories": {
+      return [
+        { id: "cat-1", name: "Deep Work", color: "#14b8a6", icon: "briefcase" },
+        { id: "cat-2", name: "Engineering", color: "#3b82f6", icon: "code" },
+        { id: "cat-3", name: "Health & Fitness", color: "#10b981", icon: "activity" },
+        { id: "cat-4", name: "Personal", color: "#f59e0b", icon: "user" },
+      ];
+    }
+
+    case "get_daily_goal": {
+      return {
+        targetTasksCount: 5,
+        notes: "Focus on deep work blocks and high impact items",
+      };
+    }
+
+    case "update_daily_goal": {
+      return true;
+    }
+
     // -------------------------------------------------------------
     // Movies & Series
     // -------------------------------------------------------------

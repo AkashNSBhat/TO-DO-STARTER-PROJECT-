@@ -411,6 +411,344 @@ pub fn toggle_task_completion(
     Ok(true)
 }
 
+#[tauri::command]
+pub fn create_task(
+    state: State<'_, AppState>,
+    input: CreateTaskInput,
+) -> Result<TaskDetail, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let task_id = format!("task-{}", uuid::Uuid::new_v4());
+    let priority = input.priority.unwrap_or_else(|| "medium".to_string());
+    let status = "todo".to_string();
+
+    conn.execute(
+        r#"
+        INSERT INTO tasks (id, title, description, category_id, priority, status, due_date, is_completed, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, datetime('now'), datetime('now'))
+        "#,
+        rusqlite::params![
+            task_id,
+            input.title,
+            input.description,
+            input.category_id,
+            priority,
+            status,
+            input.due_date,
+        ],
+    )
+    .map_err(|e| format!("Failed to insert task: {}", e))?;
+
+    let mut subtasks_count = 0i64;
+    if let Some(subtasks) = input.subtasks {
+        for (idx, sub_title) in subtasks.iter().enumerate() {
+            let sub_title_trimmed = sub_title.trim();
+            if !sub_title_trimmed.is_empty() {
+                let sub_id = format!("sub-{}", uuid::Uuid::new_v4());
+                conn.execute(
+                    r#"
+                    INSERT INTO subtasks (id, task_id, title, is_completed, position, created_at)
+                    VALUES (?1, ?2, ?3, 0, ?4, datetime('now'))
+                    "#,
+                    rusqlite::params![sub_id, task_id, sub_title_trimmed, idx as i32],
+                )
+                .map_err(|e| format!("Failed to insert subtask: {}", e))?;
+                subtasks_count += 1;
+            }
+        }
+    }
+
+    // Retrieve category information
+    let (cat_name, cat_color) = if let Some(ref cat_id) = input.category_id {
+        conn.query_row(
+            "SELECT name, color FROM task_categories WHERE id = ?1",
+            [cat_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap_or_else(|_| ("Personal".to_string(), "#14b8a6".to_string()))
+    } else {
+        ("Personal".to_string(), "#14b8a6".to_string())
+    };
+
+    Ok(TaskDetail {
+        id: task_id,
+        title: input.title,
+        description: input.description,
+        category_id: input.category_id.unwrap_or_default(),
+        category_name: cat_name,
+        category_color: cat_color,
+        priority,
+        status,
+        due_date: input.due_date,
+        is_completed: false,
+        completed_at: None,
+        subtasks_count,
+        completed_subtasks_count: 0,
+    })
+}
+
+#[tauri::command]
+pub fn update_task(
+    state: State<'_, AppState>,
+    input: UpdateTaskInput,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let priority = input.priority.unwrap_or_else(|| "medium".to_string());
+
+    conn.execute(
+        r#"
+        UPDATE tasks 
+        SET title = ?1, description = ?2, category_id = ?3, priority = ?4, due_date = ?5, updated_at = datetime('now')
+        WHERE id = ?6
+        "#,
+        rusqlite::params![
+            input.title,
+            input.description,
+            input.category_id,
+            priority,
+            input.due_date,
+            input.id
+        ],
+    )
+    .map_err(|e| format!("Failed to update task: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn delete_task(
+    state: State<'_, AppState>,
+    task_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute("DELETE FROM subtasks WHERE task_id = ?1", [&task_id])
+        .map_err(|e| format!("Failed to delete subtasks: {}", e))?;
+
+    conn.execute("DELETE FROM tasks WHERE id = ?1", [&task_id])
+        .map_err(|e| format!("Failed to delete task: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn get_subtasks(
+    state: State<'_, AppState>,
+    task_id: String,
+) -> Result<Vec<SubtaskDetail>, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let mut stmt = conn
+        .prepare(
+            r#"
+            SELECT id, task_id, title, is_completed, completed_at, position
+            FROM subtasks
+            WHERE task_id = ?1
+            ORDER BY position ASC, created_at ASC
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+
+    let subtasks = stmt
+        .query_map([&task_id], |r| {
+            let is_comp: i32 = r.get(3)?;
+            Ok(SubtaskDetail {
+                id: r.get(0)?,
+                task_id: r.get(1)?,
+                title: r.get(2)?,
+                is_completed: is_comp == 1,
+                completed_at: r.get(4)?,
+                position: r.get(5)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .collect();
+
+    Ok(subtasks)
+}
+
+#[tauri::command]
+pub fn toggle_subtask_completion(
+    state: State<'_, AppState>,
+    subtask_id: String,
+    is_completed: bool,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let flag = if is_completed { 1 } else { 0 };
+    let completed_at = if is_completed {
+        Some(Utc::now().to_rfc3339())
+    } else {
+        None
+    };
+
+    conn.execute(
+        "UPDATE subtasks SET is_completed = ?1, completed_at = ?2 WHERE id = ?3",
+        rusqlite::params![flag, completed_at, subtask_id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn add_subtask(
+    state: State<'_, AppState>,
+    task_id: String,
+    title: String,
+) -> Result<SubtaskDetail, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let sub_id = format!("sub-{}", uuid::Uuid::new_v4());
+    let max_pos: i32 = conn
+        .query_row(
+            "SELECT COALESCE(MAX(position), -1) FROM subtasks WHERE task_id = ?1",
+            [&task_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(-1);
+
+    let next_pos = max_pos + 1;
+
+    conn.execute(
+        "INSERT INTO subtasks (id, task_id, title, is_completed, position, created_at) VALUES (?1, ?2, ?3, 0, ?4, datetime('now'))",
+        rusqlite::params![sub_id, task_id, title, next_pos],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(SubtaskDetail {
+        id: sub_id,
+        task_id,
+        title,
+        is_completed: false,
+        completed_at: None,
+        position: next_pos,
+    })
+}
+
+#[tauri::command]
+pub fn delete_subtask(
+    state: State<'_, AppState>,
+    subtask_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute("DELETE FROM subtasks WHERE id = ?1", [&subtask_id])
+        .map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn get_task_categories(
+    state: State<'_, AppState>,
+) -> Result<Vec<CategoryDetail>, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let mut stmt = conn
+        .prepare("SELECT id, name, color, icon FROM task_categories ORDER BY position ASC, name ASC")
+        .map_err(|e| e.to_string())?;
+
+    let categories = stmt
+        .query_map([], |r| {
+            Ok(CategoryDetail {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                color: r.get(2)?,
+                icon: r.get(3)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .collect();
+
+    Ok(categories)
+}
+
+#[tauri::command]
+pub fn get_daily_goal(
+    state: State<'_, AppState>,
+    date: String,
+) -> Result<TodayGoals, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let goal = conn
+        .query_row(
+            "SELECT target_tasks_count, COALESCE(notes, '') FROM daily_goals WHERE date = ?1",
+            [&date],
+            |r| {
+                Ok(TodayGoals {
+                    target_tasks_count: r.get(0)?,
+                    notes: r.get(1)?,
+                })
+            },
+        )
+        .unwrap_or(TodayGoals {
+            target_tasks_count: 5,
+            notes: "Focus on deep work blocks and high impact items".to_string(),
+        });
+
+    Ok(goal)
+}
+
+#[tauri::command]
+pub fn update_daily_goal(
+    state: State<'_, AppState>,
+    date: String,
+    target_tasks_count: i32,
+    notes: Option<String>,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let goal_id = format!("goal-{}", date);
+    conn.execute(
+        r#"
+        INSERT INTO daily_goals (id, date, target_tasks_count, notes, updated_at)
+        VALUES (?1, ?2, ?3, ?4, datetime('now'))
+        ON CONFLICT(date) DO UPDATE SET
+            target_tasks_count = excluded.target_tasks_count,
+            notes = excluded.notes,
+            updated_at = datetime('now')
+        "#,
+        rusqlite::params![goal_id, date, target_tasks_count, notes],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(true)
+}
+
 // =============================================================
 // Movie Handlers
 // =============================================================

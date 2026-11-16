@@ -121,6 +121,40 @@ export interface TaskDetail {
   completedSubtasksCount: number;
 }
 
+export interface SubtaskDetail {
+  id: string;
+  taskId: string;
+  title: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  position: number;
+}
+
+export interface CategoryDetail {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+}
+
+export interface CreateTaskInput {
+  title: string;
+  description?: string;
+  categoryId?: string;
+  priority?: Priority;
+  dueDate?: string;
+  subtasks?: string[];
+}
+
+export interface UpdateTaskInput {
+  id: string;
+  title: string;
+  description?: string;
+  categoryId?: string;
+  priority?: Priority;
+  dueDate?: string;
+}
+
 // -------------------------------------------------------------
 // Movies Contracts
 // -------------------------------------------------------------

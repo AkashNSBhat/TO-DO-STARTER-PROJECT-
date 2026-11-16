@@ -224,6 +224,48 @@ pub struct TaskDetail {
     pub completed_subtasks_count: i64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubtaskDetail {
+    pub id: String,
+    pub task_id: String,
+    pub title: String,
+    pub is_completed: bool,
+    pub completed_at: Option<String>,
+    pub position: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryDetail {
+    pub id: String,
+    pub name: String,
+    pub color: String,
+    pub icon: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateTaskInput {
+    pub title: String,
+    pub description: Option<String>,
+    pub category_id: Option<String>,
+    pub priority: Option<String>,
+    pub due_date: Option<String>,
+    pub subtasks: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateTaskInput {
+    pub id: String,
+    pub title: String,
+    pub description: Option<String>,
+    pub category_id: Option<String>,
+    pub priority: Option<String>,
+    pub due_date: Option<String>,
+}
+
 // =============================================================
 // Movie Models
 // =============================================================

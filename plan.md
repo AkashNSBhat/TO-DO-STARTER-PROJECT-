@@ -51,18 +51,18 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 2 — Daily Tasks & Goals
-- [ ] **2.1 Create tasks**: Modal & inline quick-add with validation.
-- [ ] **2.2 Edit and delete tasks**: Inline editing and modal management with deletion confirmation.
-- [ ] **2.3 Task priorities**: Urgent, High, Medium, Low with visual indicators.
-- [ ] **2.4 Task categories**: Custom categories/tags with color badges.
-- [ ] **2.5 Due dates and reminders**: Date picker, due date tags, and overdue detection.
-- [ ] **2.6 Subtasks**: Nested checklists with progress percentage.
-- [ ] **2.7 Daily goals**: Target daily completion goals with visual tracker.
-- [ ] **2.8 Today, Upcoming and Overdue sections**: Filtered smart lists based on target dates.
-- [ ] **2.9 Completed tasks section**: Dedicated section where completed tasks are moved and visually de-emphasized.
-- [ ] **2.10 Completion timestamps and undo**: Accurate completion timestamp recording and one-click undo capability.
-- [ ] **2.11 Search, filters and sorting**: Real-time title search, category filter, priority sort, and due date sort.
-- [ ] **2.12 SQLite persistence and testing**: Full CRUD verification and data survival across application restarts.
+- [x] **2.1 Create tasks**: Modal & inline quick-add with validation.
+- [x] **2.2 Edit and delete tasks**: Inline editing and modal management with deletion confirmation.
+- [x] **2.3 Task priorities**: Urgent, High, Medium, Low with visual indicators.
+- [x] **2.4 Task categories**: Custom categories/tags with color badges.
+- [x] **2.5 Due dates and reminders**: Date picker, due date tags, and overdue detection.
+- [x] **2.6 Subtasks**: Nested checklists with progress percentage.
+- [x] **2.7 Daily goals**: Target daily completion goals with visual tracker.
+- [x] **2.8 Today, Upcoming and Overdue sections**: Filtered smart lists based on target dates.
+- [x] **2.9 Completed tasks section**: Dedicated section where completed tasks are moved and visually de-emphasized.
+- [x] **2.10 Completion timestamps and undo**: Accurate completion timestamp recording and one-click undo capability.
+- [x] **2.11 Search, filters and sorting**: Real-time title search, category filter, priority sort, and due date sort.
+- [x] **2.12 SQLite persistence and testing**: Full CRUD verification and data survival across application restarts.
 
 ---
 

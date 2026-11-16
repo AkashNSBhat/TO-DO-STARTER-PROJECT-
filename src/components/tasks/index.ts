@@ -4,3 +4,7 @@ export * from "./TaskList";
 export * from "./TaskFilterTabs";
 export * from "./TaskEmptyState";
 export * from "./TaskSkeleton";
+export * from "./TaskModal";
+export * from "./TaskDeleteDialog";
+export * from "./TaskQuickAdd";
+export * from "./DailyGoalCard";

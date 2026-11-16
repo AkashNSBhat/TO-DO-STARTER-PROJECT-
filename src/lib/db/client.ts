@@ -5,6 +5,11 @@ import {
   DashboardData,
   TaskDetail,
   TaskFilter,
+  CreateTaskInput,
+  UpdateTaskInput,
+  SubtaskDetail,
+  CategoryDetail,
+  TodayGoals,
   MovieDetail,
   MovieFilter,
   SeriesDetail,
@@ -194,6 +199,209 @@ export class DatabaseClient {
       return true;
     }
     return await invoke<boolean>("toggle_task_completion", { taskId, isCompleted });
+  }
+
+  static async createTask(input: CreateTaskInput): Promise<TaskDetail> {
+    if (!this.isTauri()) {
+      const id = `task-${Date.now()}`;
+      const subtasksCount = input.subtasks?.length ?? 0;
+      const categories: CategoryDetail[] = await this.getTaskCategories();
+      const cat = categories.find((c) => c.id === input.categoryId) || categories[0];
+
+      const newTask: TaskDetail = {
+        id,
+        title: input.title,
+        description: input.description,
+        categoryId: cat?.id || "cat-work",
+        categoryName: cat?.name || "Deep Work",
+        categoryColor: cat?.color || "#14b8a6",
+        priority: input.priority || "medium",
+        status: "todo",
+        dueDate: input.dueDate,
+        isCompleted: false,
+        completedAt: undefined,
+        subtasksCount,
+        completedSubtasksCount: 0,
+      };
+
+      this.localData.tasks.unshift(newTask);
+
+      if (input.subtasks) {
+        if (!this.localData.subtasksMap) this.localData.subtasksMap = {};
+        this.localData.subtasksMap[id] = input.subtasks.map((st, i) => ({
+          id: `sub-${Date.now()}-${i}`,
+          taskId: id,
+          title: st,
+          isCompleted: false,
+          position: i,
+        }));
+      }
+
+      return newTask;
+    }
+
+    return await invoke<TaskDetail>("create_task", { input });
+  }
+
+  static async updateTask(input: UpdateTaskInput): Promise<boolean> {
+    if (!this.isTauri()) {
+      const task = this.localData.tasks.find((t: TaskDetail) => t.id === input.id);
+      if (task) {
+        task.title = input.title;
+        task.description = input.description;
+        task.priority = input.priority || task.priority;
+        task.dueDate = input.dueDate;
+        if (input.categoryId) {
+          const categories: CategoryDetail[] = await this.getTaskCategories();
+          const cat = categories.find((c) => c.id === input.categoryId);
+          if (cat) {
+            task.categoryId = cat.id;
+            task.categoryName = cat.name;
+            task.categoryColor = cat.color;
+          }
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_task", { input });
+  }
+
+  static async deleteTask(taskId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.tasks = this.localData.tasks.filter((t: TaskDetail) => t.id !== taskId);
+      if (this.localData.subtasksMap) {
+        delete this.localData.subtasksMap[taskId];
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("delete_task", { taskId });
+  }
+
+  static async getSubtasks(taskId: string): Promise<SubtaskDetail[]> {
+    if (!this.isTauri()) {
+      if (!this.localData.subtasksMap) {
+        this.localData.subtasksMap = {
+          "task-1": [
+            { id: "sub-1-1", taskId: "task-1", title: "Review IPC schema models", isCompleted: true, position: 0 },
+            { id: "sub-1-2", taskId: "task-1", title: "Test WAL mode pragma check", isCompleted: false, position: 1 },
+          ],
+          "task-2": [
+            { id: "sub-2-1", taskId: "task-2", title: "Write initial assertions", isCompleted: true, position: 0 },
+          ],
+        };
+      }
+      return this.localData.subtasksMap[taskId] || [];
+    }
+
+    return await invoke<SubtaskDetail[]>("get_subtasks", { taskId });
+  }
+
+  static async toggleSubtaskCompletion(subtaskId: string, isCompleted: boolean): Promise<boolean> {
+    if (!this.isTauri()) {
+      if (this.localData.subtasksMap) {
+        for (const taskId of Object.keys(this.localData.subtasksMap)) {
+          const sub = this.localData.subtasksMap[taskId].find((s: SubtaskDetail) => s.id === subtaskId);
+          if (sub) {
+            sub.isCompleted = isCompleted;
+            sub.completedAt = isCompleted ? new Date().toISOString() : undefined;
+
+            // Update parent task completedSubtasksCount
+            const parent = this.localData.tasks.find((t: TaskDetail) => t.id === taskId);
+            if (parent) {
+              const compCount = this.localData.subtasksMap[taskId].filter((s: SubtaskDetail) => s.isCompleted).length;
+              parent.completedSubtasksCount = compCount;
+            }
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("toggle_subtask_completion", { subtaskId, isCompleted });
+  }
+
+  static async addSubtask(taskId: string, title: string): Promise<SubtaskDetail> {
+    if (!this.isTauri()) {
+      if (!this.localData.subtasksMap) this.localData.subtasksMap = {};
+      if (!this.localData.subtasksMap[taskId]) this.localData.subtasksMap[taskId] = [];
+      const newSub: SubtaskDetail = {
+        id: `sub-${Date.now()}`,
+        taskId,
+        title,
+        isCompleted: false,
+        position: this.localData.subtasksMap[taskId].length,
+      };
+      this.localData.subtasksMap[taskId].push(newSub);
+
+      const parent = this.localData.tasks.find((t: TaskDetail) => t.id === taskId);
+      if (parent) {
+        parent.subtasksCount = this.localData.subtasksMap[taskId].length;
+      }
+      return newSub;
+    }
+
+    return await invoke<SubtaskDetail>("add_subtask", { taskId, title });
+  }
+
+  static async deleteSubtask(subtaskId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      if (this.localData.subtasksMap) {
+        for (const taskId of Object.keys(this.localData.subtasksMap)) {
+          const idx = this.localData.subtasksMap[taskId].findIndex((s: SubtaskDetail) => s.id === subtaskId);
+          if (idx !== -1) {
+            this.localData.subtasksMap[taskId].splice(idx, 1);
+            const parent = this.localData.tasks.find((t: TaskDetail) => t.id === taskId);
+            if (parent) {
+              parent.subtasksCount = this.localData.subtasksMap[taskId].length;
+              parent.completedSubtasksCount = this.localData.subtasksMap[taskId].filter((s: SubtaskDetail) => s.isCompleted).length;
+            }
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("delete_subtask", { subtaskId });
+  }
+
+  static async getTaskCategories(): Promise<CategoryDetail[]> {
+    if (!this.isTauri()) {
+      return [
+        { id: "cat-work", name: "Deep Work", color: "#14b8a6", icon: "briefcase" },
+        { id: "cat-eng", name: "Engineering", color: "#3b82f6", icon: "code" },
+        { id: "cat-fit", name: "Health & Fitness", color: "#10b981", icon: "activity" },
+        { id: "cat-pers", name: "Personal", color: "#f59e0b", icon: "user" },
+      ];
+    }
+
+    return await invoke<CategoryDetail[]>("get_task_categories");
+  }
+
+  static async getDailyGoal(date: string): Promise<TodayGoals> {
+    if (!this.isTauri()) {
+      return this.localData.todayGoals || {
+        targetTasksCount: 5,
+        notes: "Focus on deep work blocks and high impact items",
+      };
+    }
+
+    return await invoke<TodayGoals>("get_daily_goal", { date });
+  }
+
+  static async updateDailyGoal(date: string, targetTasksCount: number, notes?: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.todayGoals = {
+        targetTasksCount,
+        notes: notes || "",
+      };
+      return true;
+    }
+
+    return await invoke<boolean>("update_daily_goal", { date, targetTasksCount, notes });
   }
 
   // =============================================================
