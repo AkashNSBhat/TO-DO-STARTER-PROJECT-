@@ -1,0 +1,21 @@
+[package]
+name = "daymark"
+version = "0.1.0"
+description = "Every day counts. Every completion stays."
+authors = ["Daymark Team"]
+edition = "2021"
+
+[lib]
+name = "daymark_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.33", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "fast-rng"] }

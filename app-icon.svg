@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1e23" />
+      <stop offset="100%" stop-color="#121417" />
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4b9" />
+      <stop offset="100%" stop-color="#0d9488" />
+    </linearGradient>
+  </defs>
+  <!-- Rounded Base -->
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="url(#bgGrad)" stroke="#2d343f" stroke-width="12" />
+  
+  <!-- Outer accent ring -->
+  <rect x="72" y="72" width="368" height="368" rx="72" fill="none" stroke="url(#tealGrad)" stroke-width="10" stroke-opacity="0.35" />
+
+  <!-- D / Calendar Mark Symbol -->
+  <path d="M 160 148 L 268 148 C 340 148 384 192 384 256 C 384 320 340 364 268 364 L 160 364 Z" fill="none" stroke="url(#tealGrad)" stroke-width="34" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Inner Checkmark / Milestone Mark -->
+  <path d="M 216 256 L 256 296 L 336 208" fill="none" stroke="#f1f5f9" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

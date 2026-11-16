@@ -1,0 +1,32 @@
+# Node dependencies
+node_modules/
+.pnpm-debug.log*
+
+# Vite build output
+dist/
+dist-ssr/
+*.local
+
+# Rust & Cargo build artifacts
+src-tauri/target/
+src-tauri/Cargo.lock.bak
+
+# SQLite local databases (when placed locally for tests)
+*.db
+*.db-shm
+*.db-wal
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+Thumbs.db
