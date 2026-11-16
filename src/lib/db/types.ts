@@ -1,3 +1,10 @@
+// =============================================================
+// DAYMARK - Unified Database & Tauri IPC Type Definitions
+// =============================================================
+
+// -------------------------------------------------------------
+// Diagnostics & System Telemetry (Phase 0 Compatibility)
+// -------------------------------------------------------------
 export interface TableStat {
   name: string;
   count: number;
@@ -23,12 +30,24 @@ export interface AppInfoResponse {
   sqlite_version: string;
 }
 
+// -------------------------------------------------------------
+// Primitive Enums & Filter Types
+// -------------------------------------------------------------
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled';
+export type TaskFilter = 'all' | 'today' | 'upcoming' | 'overdue' | 'completed';
+
 export type MovieStatus = 'planned' | 'watching' | 'completed';
+export type MovieFilter = 'all' | 'planned' | 'watching' | 'completed';
+
 export type SeriesStatus = 'planned' | 'watching' | 'completed';
+export type SeriesFilter = 'all' | 'planned' | 'watching' | 'completed';
+
+export type ArchiveFilter = 'all' | 'movies' | 'movie' | 'series';
+
 export type PlanPeriod = 'weekly' | 'monthly' | 'yearly';
-export type PlanCategory = 'entertainment' | 'learning' | 'personal_goals' | 'projects' | 'custom';
+export type PlanCategory = 'entertainment' | 'learning' | 'personal_goals' | 'projects';
+
 export type ActivityType = 
   | 'task_completed' 
   | 'movie_completed' 
@@ -37,6 +56,209 @@ export type ActivityType =
   | 'plan_completed' 
   | 'historical_added';
 
+// -------------------------------------------------------------
+// Home Dashboard Contracts (PROJECT.md § Interface Contracts 3)
+// -------------------------------------------------------------
+export interface DashboardMetrics {
+  completedTasksToday: number;
+  pendingTasksToday: number;
+  totalMoviesWatched: number;
+  activeSeriesCount: number;
+}
+
+export interface DailyChecklistItem {
+  id: string;
+  title: string;
+  category: string;
+  priority: string;
+  isCompleted: boolean;
+}
+
+export interface TodayGoals {
+  targetTasksCount: number;
+  notes: string;
+}
+
+export interface ScheduleSlot {
+  time: string;
+  title: string;
+  type: string;
+}
+
+export interface ActivitySplinePoint {
+  date: string;
+  completions: number;
+}
+
+export interface DashboardData {
+  greeting: string;
+  streakCount: number;
+  yearProgressPct: number;
+  monthProgressPct: number;
+  metrics: DashboardMetrics;
+  dailyChecklist: DailyChecklistItem[];
+  todayGoals: TodayGoals;
+  scheduleSlots: ScheduleSlot[];
+  activitySpline: ActivitySplinePoint[];
+}
+
+// -------------------------------------------------------------
+// Daily Tasks Contracts
+// -------------------------------------------------------------
+export interface TaskDetail {
+  id: string;
+  title: string;
+  description?: string;
+  categoryId: string;
+  categoryName: string;
+  categoryColor: string;
+  priority: Priority;
+  status: TaskStatus;
+  dueDate?: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  subtasksCount: number;
+  completedSubtasksCount: number;
+}
+
+// -------------------------------------------------------------
+// Movies Contracts
+// -------------------------------------------------------------
+export interface MovieDetail {
+  id: string;
+  title: string;
+  releaseYear?: number;
+  status: MovieStatus;
+  rating?: number;
+  dateWatched?: string;
+  isHistorical: boolean;
+  genres: string[];
+  posterColor?: string;
+  notes?: string;
+}
+
+// -------------------------------------------------------------
+// Series & Episodes Contracts
+// -------------------------------------------------------------
+export interface EpisodeDetail {
+  id: string;
+  episodeNumber: number;
+  title: string;
+  isCompleted: boolean;
+  completedAt?: string;
+  notes?: string;
+}
+
+export interface SeasonDetail {
+  id: string;
+  seasonNumber: number;
+  title: string;
+  episodes: EpisodeDetail[];
+}
+
+export interface SeriesDetail {
+  id: string;
+  title: string;
+  status: SeriesStatus;
+  totalSeasons: number;
+  totalEpisodes: number;
+  completedEpisodes: number;
+  progressText: string; // e.g. "2/10 Episodes"
+  rating?: number;
+  genres: string[];
+  posterColor?: string;
+}
+
+export interface SeriesFull extends SeriesDetail {
+  seasons: SeasonDetail[];
+}
+
+// -------------------------------------------------------------
+// Entertainment Archive Contracts
+// -------------------------------------------------------------
+export interface ArchiveItem {
+  id: string;
+  type: 'movie' | 'series';
+  title: string;
+  releaseYear?: number;
+  rating?: number;
+  genres: string[];
+  dateCompleted: string;
+  isHistorical: boolean;
+}
+
+// -------------------------------------------------------------
+// Horizon Planning (PLAN) Contracts
+// -------------------------------------------------------------
+export interface PlanItem {
+  id: string;
+  periodType: PlanPeriod;
+  periodIdentifier: string;
+  category: PlanCategory;
+  customCategoryName?: string;
+  title: string;
+  description?: string;
+  priorityOrder: number;
+  isCompleted: boolean;
+  completedAt?: string;
+  linkedTaskId?: string;
+  linkedMovieId?: string;
+  linkedSeriesId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// -------------------------------------------------------------
+// Activity History & Statistics Contracts
+// -------------------------------------------------------------
+export interface ActivityHistoryItem {
+  id: string;
+  activityType: ActivityType;
+  entityType: string;
+  entityId: string;
+  title: string;
+  metadataJson?: string;
+  timestamp: string;
+}
+
+export interface CategoryStat {
+  category: string;
+  color: string;
+  count: number;
+}
+
+export interface DayOfWeekStat {
+  day: string;
+  completions: number;
+}
+
+export interface MonthlyTrendStat {
+  month: string;
+  tasks: number;
+  media: number;
+}
+
+export interface StatisticsData {
+  totalTasksCompleted: number;
+  tasksCompletionRate: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  totalMoviesCompleted: number;
+  totalEpisodesCompleted: number;
+  totalWatchTimeHours: number;
+  completionsByCategory: CategoryStat[];
+  completionsByDayOfWeek: DayOfWeekStat[];
+  monthlyTrend: MonthlyTrendStat[];
+}
+
+// -------------------------------------------------------------
+// App Settings Contract
+// -------------------------------------------------------------
+export type AppSettings = Record<string, string>;
+
+// -------------------------------------------------------------
+// Legacy Entity Row Types (Preserved for internal DB mapping)
+// -------------------------------------------------------------
 export interface TaskCategory {
   id: string;
   name: string;
@@ -136,32 +358,4 @@ export interface Genre {
   id: string;
   name: string;
   created_at: string;
-}
-
-export interface PlanItem {
-  id: string;
-  period_type: PlanPeriod;
-  period_identifier: string;
-  category: PlanCategory;
-  custom_category_name?: string;
-  title: string;
-  description?: string;
-  priority_order: number;
-  is_completed: boolean;
-  completed_at?: string;
-  linked_task_id?: string;
-  linked_movie_id?: string;
-  linked_series_id?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface ActivityHistoryItem {
-  id: string;
-  activity_type: ActivityType;
-  entity_type: string;
-  entity_id: string;
-  title: string;
-  metadata_json?: string;
-  timestamp: string;
 }

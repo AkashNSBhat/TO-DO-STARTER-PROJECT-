@@ -8,8 +8,8 @@
     <style>
       /* Ensure solid background during desktop startup */
       html, body {
-        background-color: #121417;
-        color: #e2e8f0;
+        background-color: var(--bg-primary, #121417);
+        color: var(--text-primary, #e2e8f0);
         margin: 0;
         padding: 0;
         user-select: none;
@@ -17,7 +17,7 @@
       }
     </style>
   </head>
-  <body class="bg-[#121417] text-[#e2e8f0] antialiased">
+  <body class="bg-[var(--bg-primary)] text-[var(--text-primary)] antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

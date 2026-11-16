@@ -71,7 +71,7 @@ mod tests {
         let mig_version: i32 = conn
             .query_row("SELECT MAX(version) FROM schema_migrations", [], |r| r.get(0))
             .expect("Failed to query migration version");
-        assert_eq!(mig_version, 1, "Migration version should be 1");
+        assert_eq!(mig_version, 2, "Migration version should be 2");
 
         // Verify seeded task categories
         let cat_count: i64 = conn

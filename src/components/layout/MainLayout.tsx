@@ -23,8 +23,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-charcoal-900 text-slate-100">
-      {/* Sidebar */}
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-charcoal-900 text-slate-900 dark:text-slate-100 transition-colors duration-150">
+      {/* Collapsible Sidebar */}
       <Sidebar
         currentTab={currentTab}
         onSelectTab={onSelectTab}
@@ -43,8 +43,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onOpenSettings={() => onSelectTab("settings")}
         />
 
-        <main className="flex-1 overflow-y-auto p-6 bg-charcoal-900">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-50 dark:bg-charcoal-900 transition-colors">
+          <div className="max-w-7xl mx-auto w-full">
+            {children}
+          </div>
         </main>
 
         <StatusBar

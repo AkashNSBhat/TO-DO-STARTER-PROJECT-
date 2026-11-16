@@ -30,9 +30,26 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            // Core System & Diagnostics
             commands::system::get_app_info,
             commands::db::get_db_status,
             commands::db::ping_db,
+
+            // Milestone 2 IPC Query & Mutation Commands
+            commands::db::get_dashboard_data,
+            commands::db::get_tasks,
+            commands::db::toggle_task_completion,
+            commands::db::get_movies,
+            commands::db::get_series,
+            commands::db::get_series_detail,
+            commands::db::toggle_episode_completion,
+            commands::db::get_archive_data,
+            commands::db::get_plan_items,
+            commands::db::toggle_plan_item_completion,
+            commands::db::get_activity_history,
+            commands::db::get_statistics,
+            commands::db::get_app_settings,
+            commands::db::set_app_setting,
         ])
         .run(tauri::generate_context!())
         .expect("error while running DAYMARK desktop application");

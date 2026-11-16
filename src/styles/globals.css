@@ -3,23 +3,66 @@
 @tailwind utilities;
 
 @layer base {
+  /* Light Mode Token Inversion */
   :root {
+    --bg-primary: #f8fafc;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #94a3b8;
+    
+    /* Accents */
+    --accent: #14b8a6;
+    --accent-hover: #0d9488;
+    --accent-light: rgba(20, 184, 166, 0.12);
+    --accent-teal: #14b8a6;
+    --accent-emerald: #10b981;
+    --accent-violet: #8b5cf6;
+    --accent-amber: #f59e0b;
+
+    /* Card & chrome */
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+  }
+
+  /* Dark Mode Reference Obsidian Tokens */
+  .dark {
     --bg-primary: #121417;
-    --bg-secondary: #1a1e23;
-    --bg-tertiary: #242930;
-    --border-subtle: #2d343f;
+    --bg-secondary: #1a1e24;
+    --bg-tertiary: #222730;
+    --border-subtle: #2b323d;
     --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
     --text-muted: #64748b;
-    --accent: #14b8a6; /* Subtle teal / muted sage */
+
+    /* Accents */
+    --accent: #14b8a6;
     --accent-hover: #0d9488;
     --accent-light: rgba(20, 184, 166, 0.12);
+    --accent-teal: #14b8a6;
+    --accent-emerald: #10b981;
+    --accent-violet: #8b5cf6;
+    --accent-amber: #f59e0b;
+
+    /* Card & chrome */
+    --card-bg: #1a1e24;
+    --card-border: #2b323d;
+  }
+
+  html {
+    color-scheme: light dark;
   }
 
   body {
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
 
@@ -34,10 +77,17 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2d343f;
+  background: var(--border-subtle);
   border-radius: 9999px;
+  transition: background-color 0.15s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--text-secondary);
+}
+
+/* Selection and Desktop UI optimizations */
+::selection {
+  background-color: rgba(20, 184, 166, 0.3);
+  color: inherit;
 }

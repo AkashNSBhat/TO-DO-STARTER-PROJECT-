@@ -7,7 +7,13 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "test": "node scripts/run-tests.mjs",
+    "test:tier1": "node scripts/run-tests.mjs tier1",
+    "test:tier2": "node scripts/run-tests.mjs tier2",
+    "test:tier3": "node scripts/run-tests.mjs tier3",
+    "test:tier4": "node scripts/run-tests.mjs tier4",
+    "test:types": "tsc -p tests/tsconfig.json --noEmit"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",

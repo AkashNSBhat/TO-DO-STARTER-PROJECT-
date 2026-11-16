@@ -20,33 +20,33 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 0 — Architecture & Project Initialization
-- [ ] **0.1 Environment verification**: Verify Node.js, Rust/Cargo, MSVC Build Tools, and pnpm.
-- [ ] **0.2 Tauri 2 + React + TypeScript + Vite initialization**: Set up Tauri v2 desktop shell with React 18, TypeScript, and Vite bundler.
-- [ ] **0.3 Frontend and Rust backend configuration**: Configure Tailwind CSS (charcoal backgrounds, sage/teal accents, soft grey secondary text), PostCSS, tsconfig path aliases, and Tauri capabilities.
-- [ ] **0.4 SQLite integration**: Configure `rusqlite` (bundled engine) in Rust with WAL mode, foreign keys, and safe connection state management.
-- [ ] **0.5 Folder and file architecture**: Establish clean modular directory layout for frontend (`components`, `hooks`, `lib`, `pages`, `styles`, `types`) and backend (`commands`, `db`, `models`, `state`).
-- [ ] **0.6 Database schema and migrations**: Design normalized schema for Tasks, Subtasks, Goals, Movies, Series, Seasons, Episodes, Genres, Plans, Activity History, and Settings with automated migration runner.
-- [ ] **0.7 Git and README setup**: Set up version control, documentation, and architecture description.
-- [ ] **0.8 Initial desktop application launch**: Launch and verify the native Tauri desktop window connecting to SQLite.
+- [x] **0.1 Environment verification**: Verify Node.js, Rust/Cargo, MSVC Build Tools, and pnpm.
+- [x] **0.2 Tauri 2 + React + TypeScript + Vite initialization**: Set up Tauri v2 desktop shell with React 18, TypeScript, and Vite bundler.
+- [x] **0.3 Frontend and Rust backend configuration**: Configure Tailwind CSS (charcoal backgrounds, sage/teal accents, soft grey secondary text), PostCSS, tsconfig path aliases, and Tauri capabilities.
+- [x] **0.4 SQLite integration**: Configure `rusqlite` (bundled engine) in Rust with WAL mode, foreign keys, and safe connection state management.
+- [x] **0.5 Folder and file architecture**: Establish clean modular directory layout for frontend (`components`, `hooks`, `lib`, `pages`, `styles`, `types`) and backend (`commands`, `db`, `models`, `state`).
+- [x] **0.6 Database schema and migrations**: Design normalized schema for Tasks, Subtasks, Goals, Movies, Series, Seasons, Episodes, Genres, Plans, Activity History, and Settings with automated migration runner.
+- [x] **0.7 Git and README setup**: Set up version control, documentation, and architecture description.
+- [x] **0.8 Initial desktop application launch**: Launch and verify the native Tauri desktop window connecting to SQLite.
 
 ---
 
 ## Phase 1 — Design System & Application UI
-- [ ] **1.1 Colour palette and design tokens**: Implement dark charcoal backgrounds, muted sage green/teal accents, subtle borders, and soft grey text.
-- [ ] **1.2 Typography and spacing**: Native desktop font stack, consistent spacing scale, and restrained rounded borders.
-- [ ] **1.3 Sidebar and navigation**: Polished collapsible sidebar with 8 primary routes + PLAN module.
-- [ ] **1.4 Top navigation and search**: Header with active route title, global search bar, current date, and status indicators.
-- [ ] **1.5 Reusable UI components**: Button, Input, Modal, Badge, Dropdown, Card, Tooltip, Progress bar, and Tab controls.
-- [ ] **1.6 Home dashboard layout**: Grid layout with summary metrics, daily progress bar, quick actions, and recent activity preview.
-- [ ] **1.7 Daily Tasks page layout**: View switcher (Today, Upcoming, Overdue, Completed), filter bar, and task list container.
-- [ ] **1.8 Movies page layout**: Grid/table views, status tabs (Planned, Watching, Completed), filter controls, and add modal.
-- [ ] **1.9 Series page layout**: Series cards, season/episode hierarchical view, and progress bars.
-- [ ] **1.10 Entertainment Archive layout**: Unified library view with Movies/Series tabs, genre filter pills, and rating sorting.
-- [ ] **1.11 PLAN page layout**: Multi-horizon views (Weekly, Monthly, Yearly) with categorized columns.
-- [ ] **1.12 Activity History and Statistics layouts**: Chronological activity timeline and Recharts analytics grid.
-- [ ] **1.13 Settings page**: General preferences, theme toggle, database backup/restore, and app metadata.
-- [ ] **1.14 Dark and light themes**: Seamless theme switching with persistent preference.
-- [ ] **1.15 Navigation and responsive desktop layouts**: Fluid layout transitions and minimum window constraints.
+- [x] **1.1 Colour palette and design tokens**: Implement dark charcoal backgrounds, muted sage green/teal accents, subtle borders, and soft grey text.
+- [x] **1.2 Typography and spacing**: Native desktop font stack, consistent spacing scale, and restrained rounded borders.
+- [x] **1.3 Sidebar and navigation**: Polished collapsible sidebar with 8 primary routes + PLAN module.
+- [x] **1.4 Top navigation and search**: Header with active route title, global search bar, current date, and status indicators.
+- [x] **1.5 Reusable UI components**: Button, Input, Modal, Badge, Dropdown, Card, Tooltip, Progress bar, and Tab controls.
+- [x] **1.6 Home dashboard layout**: Grid layout with summary metrics, daily progress bar, quick actions, and recent activity preview.
+- [x] **1.7 Daily Tasks page layout**: View switcher (Today, Upcoming, Overdue, Completed), filter bar, and task list container.
+- [x] **1.8 Movies page layout**: Grid/table views, status tabs (Planned, Watching, Completed), filter controls, and add modal.
+- [x] **1.9 Series page layout**: Series cards, season/episode hierarchical view, and progress bars.
+- [x] **1.10 Entertainment Archive layout**: Unified library view with Movies/Series tabs, genre filter pills, and rating sorting.
+- [x] **1.11 PLAN page layout**: Multi-horizon views (Weekly, Monthly, Yearly) with categorized columns.
+- [x] **1.12 Activity History and Statistics layouts**: Chronological activity timeline and Recharts analytics grid.
+- [x] **1.13 Settings page**: General preferences, theme toggle, database backup/restore, and app metadata.
+- [x] **1.14 Dark and light themes**: Seamless theme switching with persistent preference.
+- [x] **1.15 Navigation and responsive desktop layouts**: Fluid layout transitions and minimum window constraints.
 
 ---
 

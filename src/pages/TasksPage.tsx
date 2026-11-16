@@ -1,49 +1,122 @@
 import React from "react";
-import { CheckSquare, Plus } from "lucide-react";
-import { Card } from "../components/common/Card";
+import { CheckSquare, Plus, RefreshCw, AlertTriangle } from "lucide-react";
+import { useTasks } from "../hooks";
+import { TaskDetail, TaskFilter } from "../lib/db/types";
 import { Button } from "../components/common/Button";
-import { Badge } from "../components/common/Badge";
+import {
+  TaskFilterTabs,
+  TaskList,
+  TaskSkeleton,
+  TaskEmptyState,
+} from "../components/tasks";
 
-export const TasksPage: React.FC = () => {
-  return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Badge variant="teal">Phase 2 Target</Badge>
-          <span className="text-xs text-slate-400">Database table: <code>tasks</code> & <code>subtasks</code> ready</span>
-        </div>
-        <Button variant="primary" size="sm" icon={<Plus className="w-4 h-4" />}>
-          New Task
+export interface TasksPageProps {
+  initialTasks?: TaskDetail[];
+  initialFilter?: TaskFilter;
+  onNewTask?: () => void;
+}
+
+export const TasksPage: React.FC<TasksPageProps> = ({
+  initialTasks,
+  initialFilter = "today",
+  onNewTask,
+}) => {
+  const {
+    filteredTasks,
+    filter,
+    setFilter,
+    counts,
+    loading,
+    error,
+    refetch,
+    toggleTask,
+  } = useTasks(initialFilter);
+
+  // If initialTasks passed (for tests/SSR), filter client-side, else use hook filteredTasks
+  const displayTasks = initialTasks
+    ? initialTasks.filter((t) => {
+        if (filter === "all") return true;
+        if (filter === "completed") return t.isCompleted;
+        if (filter === "today") return t.dueDate === "2026-11-16" || (!t.isCompleted && t.dueDate && t.dueDate <= "2026-11-16");
+        if (filter === "upcoming") return !t.isCompleted && t.dueDate && t.dueDate > "2026-11-16";
+        if (filter === "overdue") return !t.isCompleted && t.dueDate && t.dueDate < "2026-11-16";
+        return true;
+      })
+    : filteredTasks;
+
+  if (loading && (!displayTasks || displayTasks.length === 0)) {
+    return <TaskSkeleton />;
+  }
+
+  if (error && (!displayTasks || displayTasks.length === 0)) {
+    return (
+      <div className="p-8 text-center rounded-2xl bg-rose-500/10 border border-rose-500/20 max-w-xl mx-auto my-12">
+        <AlertTriangle className="w-10 h-10 text-rose-500 mx-auto mb-3" />
+        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+          Failed to load tasks
+        </h3>
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
+          {error}
+        </p>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => refetch()}
+          icon={<RefreshCw className="w-3.5 h-3.5" />}
+        >
+          Retry Connection
         </Button>
       </div>
+    );
+  }
 
-      {/* View Switcher Placeholder */}
-      <div className="flex items-center gap-2 border-b border-charcoal-700 pb-3 text-xs">
-        <span className="px-3 py-1.5 rounded-lg bg-charcoal-800 text-sage-400 font-semibold border border-charcoal-600">
-          Today
-        </span>
-        <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 cursor-pointer">
-          Upcoming
-        </span>
-        <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 cursor-pointer">
-          Overdue
-        </span>
-        <span className="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 cursor-pointer">
-          Completed
-        </span>
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-500">
+              <CheckSquare className="w-4 h-4" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              Daily Tasks
+            </h1>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Prioritize and track your deliverables. Completed tasks remain permanently visible in muted history.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="primary"
+            size="md"
+            onClick={onNewTask}
+            icon={<Plus className="w-4 h-4" />}
+          >
+            New Task
+          </Button>
+        </div>
       </div>
 
-      {/* Empty State / Architectural Overview */}
-      <Card className="text-center py-12">
-        <div className="w-12 h-12 rounded-full bg-sage-500/10 text-sage-400 flex items-center justify-center mx-auto mb-4 border border-sage-500/20">
-          <CheckSquare className="w-6 h-6" />
-        </div>
-        <h3 className="text-lg font-bold text-slate-100">Daily Task Management Engine</h3>
-        <p className="text-xs text-slate-400 max-w-md mx-auto mt-2 leading-relaxed">
-          The SQLite schema for Tasks, Subtasks, Task Categories, Priorities, and Daily Goals is fully initialized and migrated in the local database. Full UI CRUD workflows will be activated in Phase 2.
-        </p>
-      </Card>
+      {/* Segmented Filter Tabs: Today, Upcoming, Overdue, Completed, All */}
+      <TaskFilterTabs
+        activeFilter={filter}
+        onFilterChange={setFilter}
+        counts={counts}
+      />
+
+      {/* Task List or Contextual Empty State */}
+      {displayTasks.length === 0 ? (
+        <TaskEmptyState filter={filter} onCreateTask={onNewTask} />
+      ) : (
+        <TaskList
+          tasks={displayTasks}
+          filter={filter}
+          onToggle={toggleTask}
+        />
+      )}
     </div>
   );
 };
