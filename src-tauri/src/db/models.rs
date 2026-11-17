@@ -324,12 +324,15 @@ pub struct SeriesDetail {
     pub id: String,
     pub title: String,
     pub status: String,
+    pub release_year: Option<i32>,
     pub total_seasons: i32,
     pub total_episodes: i64,
     pub completed_episodes: i64,
     pub progress_text: String,
     pub rating: Option<f64>,
     pub genres: Vec<String>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -357,13 +360,58 @@ pub struct SeriesFull {
     pub id: String,
     pub title: String,
     pub status: String,
+    pub release_year: Option<i32>,
     pub total_seasons: i32,
     pub total_episodes: i64,
     pub completed_episodes: i64,
     pub progress_text: String,
     pub rating: Option<f64>,
     pub genres: Vec<String>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
     pub seasons: Vec<SeasonDetail>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SeasonConfigInput {
+    pub season_number: i32,
+    pub episode_count: i32,
+    pub episode_titles: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateSeriesInput {
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub status: Option<String>,
+    pub genres: Option<Vec<String>>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
+    pub seasons: Vec<SeasonConfigInput>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateSeriesInput {
+    pub id: String,
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub status: String,
+    pub rating: Option<f64>,
+    pub notes: Option<String>,
+    pub poster_url: Option<String>,
+    pub genres: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ToggleEpisodeResult {
+    pub is_completed: bool,
+    pub series_completed: bool,
+    pub total_episodes: i64,
+    pub completed_episodes: i64,
 }
 
 // =============================================================

@@ -16,6 +16,11 @@ import {
   UpdateMovieInput,
   SeriesDetail,
   SeriesFull,
+  CreateSeriesInput,
+  UpdateSeriesInput,
+  SeasonDetail,
+  EpisodeDetail,
+  ToggleEpisodeResult,
   ArchiveItem,
   ArchiveFilter,
   PlanItem,
@@ -508,7 +513,125 @@ export class DatabaseClient {
     return await invoke<SeriesFull>("get_series_detail", { seriesId });
   }
 
-  static async toggleEpisodeCompletion(episodeId: string, isCompleted: boolean): Promise<boolean> {
+  static async createSeries(input: CreateSeriesInput): Promise<SeriesFull> {
+    if (!this.isTauri()) {
+      const id = `ser-${Date.now()}`;
+      let totalEpisodes = 0;
+      const seasons: SeasonDetail[] = input.seasons.map((s) => {
+        const seasonId = `sea-${id}-${s.seasonNumber}`;
+        const episodes: EpisodeDetail[] = Array.from({ length: s.episodeCount }, (_, idx) => {
+          const epNum = idx + 1;
+          const epTitle = (s.episodeTitles && s.episodeTitles[idx]) || `Episode ${epNum}`;
+          totalEpisodes++;
+          return {
+            id: `ep-${id}-${s.seasonNumber}-${epNum}`,
+            episodeNumber: epNum,
+            title: epTitle,
+            isCompleted: false,
+          };
+        });
+        return {
+          id: seasonId,
+          seasonNumber: s.seasonNumber,
+          title: `Season ${s.seasonNumber}`,
+          episodes,
+        };
+      });
+
+      const full: SeriesFull = {
+        id,
+        title: input.title,
+        status: input.status || "watching",
+        releaseYear: input.releaseYear,
+        totalSeasons: input.seasons.length,
+        totalEpisodes,
+        completedEpisodes: 0,
+        progressText: `0/${totalEpisodes} Episodes`,
+        genres: input.genres || [],
+        posterUrl: input.posterUrl,
+        notes: input.notes,
+        seasons,
+      };
+
+      const summary: SeriesDetail = {
+        id: full.id,
+        title: full.title,
+        status: full.status,
+        releaseYear: full.releaseYear,
+        totalSeasons: full.totalSeasons,
+        totalEpisodes: full.totalEpisodes,
+        completedEpisodes: full.completedEpisodes,
+        progressText: full.progressText,
+        genres: full.genres,
+        posterUrl: full.posterUrl,
+        notes: full.notes,
+      };
+
+      this.localData.seriesSummary.unshift(summary);
+      this.localData.seriesDetailMap[id] = full;
+      return full;
+    }
+
+    return await invoke<SeriesFull>("create_series", { input });
+  }
+
+  static async updateSeries(input: UpdateSeriesInput): Promise<boolean> {
+    if (!this.isTauri()) {
+      const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === input.id);
+      if (summary) {
+        summary.title = input.title;
+        summary.releaseYear = input.releaseYear;
+        summary.status = input.status;
+        summary.rating = input.rating;
+        summary.notes = input.notes;
+        summary.posterUrl = input.posterUrl;
+        if (input.genres) summary.genres = input.genres;
+      }
+      const full = this.localData.seriesDetailMap[input.id];
+      if (full) {
+        full.title = input.title;
+        full.releaseYear = input.releaseYear;
+        full.status = input.status;
+        full.rating = input.rating;
+        full.notes = input.notes;
+        full.posterUrl = input.posterUrl;
+        if (input.genres) full.genres = input.genres;
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_series", { input });
+  }
+
+  static async deleteSeries(seriesId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.seriesSummary = this.localData.seriesSummary.filter((s: SeriesDetail) => s.id !== seriesId);
+      delete this.localData.seriesDetailMap[seriesId];
+      return true;
+    }
+
+    return await invoke<boolean>("delete_series", { seriesId });
+  }
+
+  static async updateEpisodeTitle(episodeId: string, title: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      for (const sKey of Object.keys(this.localData.seriesDetailMap)) {
+        const full: SeriesFull = this.localData.seriesDetailMap[sKey];
+        for (const sea of full.seasons) {
+          const ep = sea.episodes.find((e: EpisodeDetail) => e.id === episodeId);
+          if (ep) {
+            ep.title = title.trim();
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_episode_title", { episodeId, title });
+  }
+
+  static async toggleEpisodeCompletion(episodeId: string, isCompleted: boolean): Promise<ToggleEpisodeResult> {
     if (!this.isTauri()) {
       for (const seriesKey of Object.keys(this.localData.seriesDetailMap)) {
         const full: SeriesFull = this.localData.seriesDetailMap[seriesKey];
@@ -527,10 +650,171 @@ export class DatabaseClient {
             full.completedEpisodes = completedCount;
             full.progressText = `${completedCount}/${full.totalEpisodes} Episodes`;
 
+            const seriesCompleted = full.totalEpisodes > 0 && completedCount === full.totalEpisodes;
+            if (seriesCompleted) {
+              full.status = "completed";
+            } else if (!isCompleted && full.status === "completed") {
+              full.status = "watching";
+            }
+
             // Also update summary
             const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === full.id);
             if (summary) {
               summary.completedEpisodes = completedCount;
+              summary.progressText = full.progressText;
+              summary.status = full.status;
+            }
+
+            return {
+              isCompleted,
+              seriesCompleted,
+              totalEpisodes: full.totalEpisodes,
+              completedEpisodes: completedCount,
+            };
+          }
+        }
+      }
+      return {
+        isCompleted,
+        seriesCompleted: false,
+        totalEpisodes: 0,
+        completedEpisodes: 0,
+      };
+    }
+    return await invoke<ToggleEpisodeResult>("toggle_episode_completion", { episodeId, isCompleted });
+  }
+
+  static async rateSeries(seriesId: string, rating: number): Promise<boolean> {
+    if (!this.isTauri()) {
+      const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === seriesId);
+      if (summary) summary.rating = rating;
+      const full = this.localData.seriesDetailMap[seriesId];
+      if (full) full.rating = rating;
+      return true;
+    }
+
+    return await invoke<boolean>("rate_series", { seriesId, rating });
+  }
+
+  static async addSeason(seriesId: string, episodeCount: number): Promise<SeasonDetail> {
+    if (!this.isTauri()) {
+      const full = this.localData.seriesDetailMap[seriesId];
+      const nextSeasonNum = (full?.seasons?.length || 0) + 1;
+      const seasonId = `sea-${seriesId}-${nextSeasonNum}`;
+      const episodes: EpisodeDetail[] = Array.from({ length: episodeCount }, (_, i) => ({
+        id: `ep-${seriesId}-${nextSeasonNum}-${i + 1}`,
+        episodeNumber: i + 1,
+        title: `Episode ${i + 1}`,
+        isCompleted: false,
+      }));
+
+      const newSeason: SeasonDetail = {
+        id: seasonId,
+        seasonNumber: nextSeasonNum,
+        title: `Season ${nextSeasonNum}`,
+        episodes,
+      };
+
+      if (full) {
+        full.seasons.push(newSeason);
+        full.totalSeasons = full.seasons.length;
+        full.totalEpisodes += episodeCount;
+        full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+      }
+      const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === seriesId);
+      if (summary && full) {
+        summary.totalSeasons = full.totalSeasons;
+        summary.totalEpisodes = full.totalEpisodes;
+        summary.progressText = full.progressText;
+      }
+      return newSeason;
+    }
+
+    return await invoke<SeasonDetail>("add_season", { seriesId, episodeCount });
+  }
+
+  static async deleteSeason(seasonId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      for (const sKey of Object.keys(this.localData.seriesDetailMap)) {
+        const full: SeriesFull = this.localData.seriesDetailMap[sKey];
+        const idx = full.seasons.findIndex((s: SeasonDetail) => s.id === seasonId);
+        if (idx !== -1) {
+          const removed = full.seasons.splice(idx, 1)[0];
+          const removedCompleted = removed.episodes.filter((e: EpisodeDetail) => e.isCompleted).length;
+          full.totalSeasons = full.seasons.length;
+          full.totalEpisodes -= removed.episodes.length;
+          full.completedEpisodes -= removedCompleted;
+          full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+
+          const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === full.id);
+          if (summary) {
+            summary.totalSeasons = full.totalSeasons;
+            summary.totalEpisodes = full.totalEpisodes;
+            summary.completedEpisodes = full.completedEpisodes;
+            summary.progressText = full.progressText;
+          }
+          return true;
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("delete_season", { seasonId });
+  }
+
+  static async addEpisode(seasonId: string, title?: string): Promise<EpisodeDetail> {
+    if (!this.isTauri()) {
+      for (const sKey of Object.keys(this.localData.seriesDetailMap)) {
+        const full: SeriesFull = this.localData.seriesDetailMap[sKey];
+        const sea = full.seasons.find((s: SeasonDetail) => s.id === seasonId);
+        if (sea) {
+          const nextEpNum = sea.episodes.length + 1;
+          const newEp: EpisodeDetail = {
+            id: `ep-${sea.id}-${nextEpNum}`,
+            episodeNumber: nextEpNum,
+            title: title?.trim() || `Episode ${nextEpNum}`,
+            isCompleted: false,
+          };
+          sea.episodes.push(newEp);
+          full.totalEpisodes += 1;
+          full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+          const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === full.id);
+          if (summary) {
+            summary.totalEpisodes = full.totalEpisodes;
+            summary.progressText = full.progressText;
+          }
+          return newEp;
+        }
+      }
+      return {
+        id: `ep-${Date.now()}`,
+        episodeNumber: 1,
+        title: title || "Episode 1",
+        isCompleted: false,
+      };
+    }
+
+    return await invoke<EpisodeDetail>("add_episode", { seasonId, title });
+  }
+
+  static async deleteEpisode(episodeId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      for (const sKey of Object.keys(this.localData.seriesDetailMap)) {
+        const full: SeriesFull = this.localData.seriesDetailMap[sKey];
+        for (const sea of full.seasons) {
+          const idx = sea.episodes.findIndex((e: EpisodeDetail) => e.id === episodeId);
+          if (idx !== -1) {
+            const removed = sea.episodes.splice(idx, 1)[0];
+            if (removed.isCompleted) {
+              full.completedEpisodes -= 1;
+            }
+            full.totalEpisodes -= 1;
+            full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+
+            const summary = this.localData.seriesSummary.find((s: SeriesDetail) => s.id === full.id);
+            if (summary) {
+              summary.totalEpisodes = full.totalEpisodes;
+              summary.completedEpisodes = full.completedEpisodes;
               summary.progressText = full.progressText;
             }
             return true;
@@ -539,7 +823,8 @@ export class DatabaseClient {
       }
       return true;
     }
-    return await invoke<boolean>("toggle_episode_completion", { episodeId, isCompleted });
+
+    return await invoke<boolean>("delete_episode", { episodeId });
   }
 
   // =============================================================

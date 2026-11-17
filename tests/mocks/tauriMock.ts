@@ -926,9 +926,267 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
             full.completedEpisodes = completed;
             full.progressText = `${completed}/${full.totalEpisodes} Episodes`;
 
+            const seriesCompleted = full.totalEpisodes > 0 && completed === full.totalEpisodes;
+            if (seriesCompleted) {
+              full.status = "completed";
+            } else if (!isCompleted && full.status === "completed") {
+              full.status = "watching";
+            }
+
             const summary = activeSeries.find((s) => s.id === full.id);
             if (summary) {
               summary.completedEpisodes = completed;
+              summary.progressText = full.progressText;
+              summary.status = full.status;
+            }
+
+            return {
+              isCompleted,
+              seriesCompleted,
+              totalEpisodes: full.totalEpisodes,
+              completedEpisodes: completed,
+            };
+          }
+        }
+      }
+      return {
+        isCompleted,
+        seriesCompleted: false,
+        totalEpisodes: 0,
+        completedEpisodes: 0,
+      };
+    }
+
+    case "create_series": {
+      const input = args.input;
+      const id = `ser-${Date.now()}`;
+      let totalEpisodes = 0;
+      const seasons = (input.seasons || []).map((s: any) => {
+        const seasonId = `sea-${id}-${s.seasonNumber}`;
+        const episodes = Array.from({ length: s.episodeCount }, (_, idx) => {
+          const epNum = idx + 1;
+          const epTitle = (s.episodeTitles && s.episodeTitles[idx]) || `Episode ${epNum}`;
+          totalEpisodes++;
+          return {
+            id: `ep-${id}-${s.seasonNumber}-${epNum}`,
+            episodeNumber: epNum,
+            title: epTitle,
+            isCompleted: false,
+          };
+        });
+        return {
+          id: seasonId,
+          seasonNumber: s.seasonNumber,
+          title: `Season ${s.seasonNumber}`,
+          episodes,
+        };
+      });
+
+      const full: SeriesFull = {
+        id,
+        title: input.title,
+        status: input.status || "watching",
+        releaseYear: input.releaseYear,
+        totalSeasons: input.seasons ? input.seasons.length : 1,
+        totalEpisodes,
+        completedEpisodes: 0,
+        progressText: `0/${totalEpisodes} Episodes`,
+        genres: input.genres || [],
+        posterUrl: input.posterUrl,
+        notes: input.notes,
+        seasons,
+      };
+
+      const summary: SeriesDetail = {
+        id: full.id,
+        title: full.title,
+        status: full.status,
+        releaseYear: full.releaseYear,
+        totalSeasons: full.totalSeasons,
+        totalEpisodes: full.totalEpisodes,
+        completedEpisodes: full.completedEpisodes,
+        progressText: full.progressText,
+        genres: full.genres,
+        posterUrl: full.posterUrl,
+        notes: full.notes,
+      };
+
+      activeSeries.unshift(summary);
+      activeSeriesDetails[id] = full;
+      return JSON.parse(JSON.stringify(full));
+    }
+
+    case "update_series": {
+      const input = args.input;
+      const summary = activeSeries.find((s) => s.id === input.id);
+      if (summary) {
+        summary.title = input.title;
+        summary.releaseYear = input.releaseYear;
+        summary.status = input.status;
+        summary.rating = input.rating;
+        summary.notes = input.notes;
+        summary.posterUrl = input.posterUrl;
+        if (input.genres) summary.genres = input.genres;
+      }
+      const full = activeSeriesDetails[input.id];
+      if (full) {
+        full.title = input.title;
+        full.releaseYear = input.releaseYear;
+        full.status = input.status;
+        full.rating = input.rating;
+        full.notes = input.notes;
+        full.posterUrl = input.posterUrl;
+        if (input.genres) full.genres = input.genres;
+      }
+      return true;
+    }
+
+    case "delete_series": {
+      const seriesId = args.seriesId ?? args.series_id;
+      const idx = activeSeries.findIndex((s) => s.id === seriesId);
+      if (idx !== -1) {
+        activeSeries.splice(idx, 1);
+      }
+      delete activeSeriesDetails[seriesId];
+      return true;
+    }
+
+    case "update_episode_title": {
+      const episodeId = args.episodeId ?? args.episode_id;
+      const title = args.title;
+      for (const sKey of Object.keys(activeSeriesDetails)) {
+        const full = activeSeriesDetails[sKey];
+        for (const sea of full.seasons) {
+          const ep = sea.episodes.find((e) => e.id === episodeId);
+          if (ep) {
+            ep.title = title;
+            return true;
+          }
+        }
+      }
+      return true;
+    }
+
+    case "rate_series": {
+      const seriesId = args.seriesId ?? args.series_id;
+      const rating = args.rating;
+      const summary = activeSeries.find((s) => s.id === seriesId);
+      if (summary) summary.rating = rating;
+      const full = activeSeriesDetails[seriesId];
+      if (full) full.rating = rating;
+      return true;
+    }
+
+    case "add_season": {
+      const seriesId = args.seriesId ?? args.series_id;
+      const episodeCount = args.episodeCount ?? args.episode_count ?? 10;
+      const full = activeSeriesDetails[seriesId];
+      const nextSeasonNum = (full?.seasons?.length || 0) + 1;
+      const seasonId = `sea-${seriesId}-${nextSeasonNum}`;
+      const episodes = Array.from({ length: episodeCount }, (_, i) => ({
+        id: `ep-${seriesId}-${nextSeasonNum}-${i + 1}`,
+        episodeNumber: i + 1,
+        title: `Episode ${i + 1}`,
+        isCompleted: false,
+      }));
+      const newSeason = {
+        id: seasonId,
+        seasonNumber: nextSeasonNum,
+        title: `Season ${nextSeasonNum}`,
+        episodes,
+      };
+      if (full) {
+        full.seasons.push(newSeason);
+        full.totalSeasons = full.seasons.length;
+        full.totalEpisodes += episodeCount;
+        full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+      }
+      const summary = activeSeries.find((s) => s.id === seriesId);
+      if (summary && full) {
+        summary.totalSeasons = full.totalSeasons;
+        summary.totalEpisodes = full.totalEpisodes;
+        summary.progressText = full.progressText;
+      }
+      return JSON.parse(JSON.stringify(newSeason));
+    }
+
+    case "delete_season": {
+      const seasonId = args.seasonId ?? args.season_id;
+      for (const sKey of Object.keys(activeSeriesDetails)) {
+        const full = activeSeriesDetails[sKey];
+        const idx = full.seasons.findIndex((s) => s.id === seasonId);
+        if (idx !== -1) {
+          const removed = full.seasons.splice(idx, 1)[0];
+          const removedCompleted = removed.episodes.filter((e) => e.isCompleted).length;
+          full.totalSeasons = full.seasons.length;
+          full.totalEpisodes -= removed.episodes.length;
+          full.completedEpisodes -= removedCompleted;
+          full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+
+          const summary = activeSeries.find((s) => s.id === full.id);
+          if (summary) {
+            summary.totalSeasons = full.totalSeasons;
+            summary.totalEpisodes = full.totalEpisodes;
+            summary.completedEpisodes = full.completedEpisodes;
+            summary.progressText = full.progressText;
+          }
+          return true;
+        }
+      }
+      return true;
+    }
+
+    case "add_episode": {
+      const seasonId = args.seasonId ?? args.season_id;
+      const title = args.title;
+      for (const sKey of Object.keys(activeSeriesDetails)) {
+        const full = activeSeriesDetails[sKey];
+        const sea = full.seasons.find((s) => s.id === seasonId);
+        if (sea) {
+          const nextEpNum = sea.episodes.length + 1;
+          const newEp = {
+            id: `ep-${sea.id}-${nextEpNum}`,
+            episodeNumber: nextEpNum,
+            title: title?.trim() || `Episode ${nextEpNum}`,
+            isCompleted: false,
+          };
+          sea.episodes.push(newEp);
+          full.totalEpisodes += 1;
+          full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+          const summary = activeSeries.find((s) => s.id === full.id);
+          if (summary) {
+            summary.totalEpisodes = full.totalEpisodes;
+            summary.progressText = full.progressText;
+          }
+          return JSON.parse(JSON.stringify(newEp));
+        }
+      }
+      return {
+        id: `ep-${Date.now()}`,
+        episodeNumber: 1,
+        title: title || "Episode 1",
+        isCompleted: false,
+      };
+    }
+
+    case "delete_episode": {
+      const episodeId = args.episodeId ?? args.episode_id;
+      for (const sKey of Object.keys(activeSeriesDetails)) {
+        const full = activeSeriesDetails[sKey];
+        for (const sea of full.seasons) {
+          const idx = sea.episodes.findIndex((e) => e.id === episodeId);
+          if (idx !== -1) {
+            const removed = sea.episodes.splice(idx, 1)[0];
+            if (removed.isCompleted) {
+              full.completedEpisodes -= 1;
+            }
+            full.totalEpisodes -= 1;
+            full.progressText = `${full.completedEpisodes}/${full.totalEpisodes} Episodes`;
+
+            const summary = activeSeries.find((s) => s.id === full.id);
+            if (summary) {
+              summary.totalEpisodes = full.totalEpisodes;
+              summary.completedEpisodes = full.completedEpisodes;
               summary.progressText = full.progressText;
             }
             return true;

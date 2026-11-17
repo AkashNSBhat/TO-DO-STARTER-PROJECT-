@@ -221,6 +221,7 @@ export interface SeriesDetail {
   id: string;
   title: string;
   status: SeriesStatus;
+  releaseYear?: number;
   totalSeasons: number;
   totalEpisodes: number;
   completedEpisodes: number;
@@ -228,10 +229,46 @@ export interface SeriesDetail {
   rating?: number;
   genres: string[];
   posterColor?: string;
+  posterUrl?: string;
+  notes?: string;
 }
 
 export interface SeriesFull extends SeriesDetail {
   seasons: SeasonDetail[];
+}
+
+export interface SeasonConfigInput {
+  seasonNumber: number;
+  episodeCount: number;
+  episodeTitles?: string[];
+}
+
+export interface CreateSeriesInput {
+  title: string;
+  releaseYear?: number;
+  status?: SeriesStatus;
+  genres?: string[];
+  posterUrl?: string;
+  notes?: string;
+  seasons: SeasonConfigInput[];
+}
+
+export interface UpdateSeriesInput {
+  id: string;
+  title: string;
+  releaseYear?: number;
+  status: SeriesStatus;
+  rating?: number;
+  notes?: string;
+  posterUrl?: string;
+  genres?: string[];
+}
+
+export interface ToggleEpisodeResult {
+  isCompleted: boolean;
+  seriesCompleted: boolean;
+  totalEpisodes: number;
+  completedEpisodes: number;
 }
 
 // -------------------------------------------------------------

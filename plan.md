@@ -84,23 +84,23 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 4 — Series & Episode Tracker
-- [ ] **4.1 Add series**: Series name, genres, release year, poster, and total seasons.
-- [ ] **4.2 Series information and genres**: Multi-genre tags and synopsis.
-- [ ] **4.3 Configure total seasons**: Dynamic season creation.
-- [ ] **4.4 Configure episodes separately for each season**: Individual episode count per season.
-- [ ] **4.5 Automatically generate episode lists**: S01E01 numbering with default naming.
-- [ ] **4.6 Default episode names**: Formatted `Episode {n}` naming convention.
-- [ ] **4.7 Edit individual episode names**: Custom episode title editing.
-- [ ] **4.8 Episode completion checkboxes**: One-click checkmark with muted grey completion style.
-- [ ] **4.9 Completion timestamps**: Timestamp recorded per completed episode.
-- [ ] **4.10 Season-wise progress**: Dynamic progress bars per season (e.g. 8/10 episodes).
-- [ ] **4.11 Overall series progress**: Cumulative percentage across all seasons.
-- [ ] **4.12 Add and remove seasons**: Safely add or remove seasons without losing existing progress.
-- [ ] **4.13 Add and remove episodes**: Adjust episode count dynamically.
-- [ ] **4.14 Preserve progress when editing**: Never erase watched episode status when modifying counts.
-- [ ] **4.15 Automatic series completion**: Triggered when the final episode is checked.
-- [ ] **4.16 Personal rating out of 10**: Rating prompt upon series completion.
-- [ ] **4.17 Database integration and testing**: Verify hierarchical relations (Series -> Seasons -> Episodes) in SQLite.
+- [x] **4.1 Add series**: Series name, genres, release year, poster, and total seasons.
+- [x] **4.2 Series information and genres**: Multi-genre tags and synopsis.
+- [x] **4.3 Configure total seasons**: Dynamic season creation.
+- [x] **4.4 Configure episodes separately for each season**: Individual episode count per season.
+- [x] **4.5 Automatically generate episode lists**: S01E01 numbering with default naming.
+- [x] **4.6 Default episode names**: Formatted `Episode {n}` naming convention.
+- [x] **4.7 Edit individual episode names**: Custom episode title editing.
+- [x] **4.8 Episode completion checkboxes**: One-click checkmark with muted grey completion style.
+- [x] **4.9 Completion timestamps**: Timestamp recorded per completed episode.
+- [x] **4.10 Season-wise progress**: Dynamic progress bars per season (e.g. 8/10 episodes).
+- [x] **4.11 Overall series progress**: Cumulative percentage across all seasons.
+- [x] **4.12 Add and remove seasons**: Safely add or remove seasons without losing existing progress.
+- [x] **4.13 Add and remove episodes**: Adjust episode count dynamically.
+- [x] **4.14 Preserve progress when editing**: Never erase watched episode status when modifying counts.
+- [x] **4.15 Automatic series completion**: Triggered when the final episode is checked.
+- [x] **4.16 Personal rating out of 10**: Rating prompt upon series completion.
+- [x] **4.17 Database integration and testing**: Verify hierarchical relations (Series -> Seasons -> Episodes) in SQLite.
 
 ---
 

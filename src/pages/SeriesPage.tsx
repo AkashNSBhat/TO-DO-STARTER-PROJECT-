@@ -9,9 +9,19 @@ import {
   ChevronRight,
   ArrowLeft,
   Layers,
+  Edit2,
+  Trash2,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
-import { useSeries } from "../hooks";
-import { SeriesDetail, SeriesStatus } from "../lib/db/types";
+import { useSeries, SeriesFilter } from "../hooks";
+import {
+  SeriesDetail,
+  SeriesStatus,
+  CreateSeriesInput,
+  UpdateSeriesInput,
+  SeasonConfigInput,
+} from "../lib/db/types";
 import { Button } from "../components/common/Button";
 import { Badge } from "../components/common/Badge";
 import { Card } from "../components/common/Card";
@@ -20,36 +30,101 @@ import { Modal } from "../components/common/Modal";
 import { ProgressBar } from "../components/common/ProgressBar";
 import { cn } from "../lib/utils";
 
+const PRESET_GENRES = [
+  "Drama",
+  "Sci-Fi",
+  "Thriller",
+  "Mystery",
+  "Crime",
+  "Comedy",
+  "Action",
+  "Adventure",
+  "Animation",
+  "Fantasy",
+  "Documentary",
+];
+
 export const SeriesPage: React.FC = () => {
   const {
     series,
+    filteredSeries,
     selectedSeries,
     selectSeries,
+    createSeries,
+    updateSeries,
+    deleteSeries,
+    updateEpisodeTitle,
     toggleEpisode,
+    rateSeries,
+    addSeason,
+    deleteSeason,
+    addEpisode,
+    deleteEpisode,
+    statusFilter,
+    setStatusFilter,
+    searchQuery,
+    setSearchQuery,
     loading,
   } = useSeries();
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedSeasonNumber, setSelectedSeasonNumber] = useState<number>(1);
+
+  // Add Series Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-
-  // New Series Form state
   const [newTitle, setNewTitle] = useState("");
+  const [newReleaseYear, setNewReleaseYear] = useState(new Date().getFullYear().toString());
   const [newStatus, setNewStatus] = useState<SeriesStatus>("watching");
-  const [newSeasonsCount, setNewSeasonsCount] = useState("3");
-  const [newEpisodesPerSeason, setNewEpisodesPerSeason] = useState("10");
+  const [newNotes, setNewNotes] = useState("");
+  const [newPosterUrl, setNewPosterUrl] = useState("");
   const [newGenres, setNewGenres] = useState<string[]>(["Drama", "Sci-Fi"]);
+  const [customGenre, setCustomGenre] = useState("");
+  const [seasonConfigs, setSeasonConfigs] = useState<SeasonConfigInput[]>([
+    { seasonNumber: 1, episodeCount: 10 },
+  ]);
 
-  // Filter series by search query
-  const filteredSeries = useMemo(() => {
-    if (!searchQuery.trim()) return series;
-    const q = searchQuery.toLowerCase();
-    return series.filter(
-      (s) =>
-        s.title.toLowerCase().includes(q) ||
-        s.genres.some((g) => g.toLowerCase().includes(q))
-    );
-  }, [series, searchQuery]);
+  // Edit Series Modal State
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [seriesToEdit, setSeriesToEdit] = useState<SeriesDetail | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editReleaseYear, setEditReleaseYear] = useState("");
+  const [editStatus, setEditStatus] = useState<SeriesStatus>("watching");
+  const [editRating, setEditRating] = useState<number>(8.0);
+  const [editNotes, setEditNotes] = useState("");
+  const [editPosterUrl, setEditPosterUrl] = useState("");
+  const [editGenres, setEditGenres] = useState<string[]>([]);
+  const [editCustomGenre, setEditCustomGenre] = useState("");
+
+  // Delete Series Modal State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [seriesToDelete, setSeriesToDelete] = useState<SeriesDetail | null>(null);
+
+  // Edit Episode Name Modal State
+  const [isEditEpModalOpen, setIsEditEpModalOpen] = useState(false);
+  const [editingEpisodeId, setEditingEpisodeId] = useState<string | null>(null);
+  const [editingEpisodeTitle, setEditingEpisodeTitle] = useState("");
+
+  // Add Season Modal State
+  const [isAddSeasonModalOpen, setIsAddSeasonModalOpen] = useState(false);
+  const [newSeasonEpCount, setNewSeasonEpCount] = useState("10");
+
+  // Add Episode Modal State
+  const [isAddEpModalOpen, setIsAddEpModalOpen] = useState(false);
+  const [newEpTitle, setNewEpTitle] = useState("");
+
+  // Series Completion Celebration & Rating Modal State
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [completedSeriesId, setCompletedSeriesId] = useState<string | null>(null);
+  const [completionRating, setCompletionRating] = useState(9.0);
+
+  // Status Filter Counts
+  const counts = useMemo(() => {
+    return {
+      all: series.length,
+      watching: series.filter((s) => s.status === "watching").length,
+      completed: series.filter((s) => s.status === "completed").length,
+      planned: series.filter((s) => s.status === "planned").length,
+    };
+  }, [series]);
 
   // Handle series selection and default season
   const handleSelectSeries = (s: SeriesDetail) => {
@@ -76,34 +151,220 @@ export const SeriesPage: React.FC = () => {
     return Math.round((completed / activeSeason.episodes.length) * 100);
   }, [activeSeason]);
 
-  const handleCreateSeriesSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
+  // Total cumulative series progress
+  const seriesCumulativeProgress = useMemo(() => {
+    if (!selectedSeries || selectedSeries.totalEpisodes === 0) return 0;
+    return Math.round(
+      (selectedSeries.completedEpisodes / selectedSeries.totalEpisodes) * 100
+    );
+  }, [selectedSeries]);
 
-    const seasonsCount = parseInt(newSeasonsCount, 10) || 1;
-    const epsCount = parseInt(newEpisodesPerSeason, 10) || 10;
-
-    const created: SeriesDetail = {
-      id: `ser-${Date.now()}`,
-      title: newTitle.trim(),
-      status: newStatus,
-      totalSeasons: seasonsCount,
-      totalEpisodes: seasonsCount * epsCount,
-      completedEpisodes: 0,
-      progressText: `0/${seasonsCount * epsCount} Episodes`,
-      genres: newGenres,
-      rating: 8.5,
-    };
-
-    series.unshift(created);
-    setIsAddModalOpen(false);
+  // Open Create Modal
+  const handleOpenCreateModal = () => {
     setNewTitle("");
+    setNewReleaseYear(new Date().getFullYear().toString());
+    setNewStatus("watching");
+    setNewNotes("");
+    setNewPosterUrl("");
+    setNewGenres(["Drama", "Sci-Fi"]);
+    setCustomGenre("");
+    setSeasonConfigs([
+      { seasonNumber: 1, episodeCount: 10 },
+      { seasonNumber: 2, episodeCount: 10 },
+    ]);
+    setIsAddModalOpen(true);
+  };
+
+  // Add/Remove seasons in configuration builder
+  const handleAddSeasonConfig = () => {
+    setSeasonConfigs((prev) => [
+      ...prev,
+      { seasonNumber: prev.length + 1, episodeCount: 10 },
+    ]);
+  };
+
+  const handleRemoveSeasonConfig = (idx: number) => {
+    if (seasonConfigs.length <= 1) return;
+    setSeasonConfigs((prev) => {
+      const updated = prev.filter((_, i) => i !== idx);
+      return updated.map((cfg, i) => ({ ...cfg, seasonNumber: i + 1 }));
+    });
+  };
+
+  const handleUpdateSeasonEpCount = (idx: number, countStr: string) => {
+    const val = parseInt(countStr, 10);
+    const count = isNaN(val) || val < 1 ? 1 : val;
+    setSeasonConfigs((prev) =>
+      prev.map((cfg, i) => (i === idx ? { ...cfg, episodeCount: count } : cfg))
+    );
   };
 
   const toggleGenre = (genre: string) => {
     setNewGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
+  };
+
+  const handleAddCustomGenre = () => {
+    const trimmed = customGenre.trim();
+    if (trimmed && !newGenres.includes(trimmed)) {
+      setNewGenres((prev) => [...prev, trimmed]);
+      setCustomGenre("");
+    }
+  };
+
+  // Submit Create Series
+  const handleCreateSeriesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    const yearNum = newReleaseYear.trim() ? parseInt(newReleaseYear, 10) : undefined;
+    const input: CreateSeriesInput = {
+      title: newTitle.trim(),
+      releaseYear: isNaN(yearNum as number) ? undefined : yearNum,
+      status: newStatus,
+      genres: newGenres,
+      notes: newNotes.trim() || undefined,
+      posterUrl: newPosterUrl.trim() || undefined,
+      seasons: seasonConfigs,
+    };
+
+    const created = await createSeries(input);
+    if (created) {
+      setIsAddModalOpen(false);
+      setSelectedSeasonNumber(1);
+    }
+  };
+
+  // Open Edit Modal
+  const handleOpenEditModal = (s: SeriesDetail, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSeriesToEdit(s);
+    setEditTitle(s.title);
+    setEditReleaseYear(s.releaseYear ? s.releaseYear.toString() : "");
+    setEditStatus(s.status);
+    setEditRating(s.rating || 8.0);
+    setEditNotes(s.notes || "");
+    setEditPosterUrl(s.posterUrl || "");
+    setEditGenres(s.genres || []);
+    setEditCustomGenre("");
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSeriesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!seriesToEdit || !editTitle.trim()) return;
+
+    const yearNum = editReleaseYear.trim() ? parseInt(editReleaseYear, 10) : undefined;
+    const input: UpdateSeriesInput = {
+      id: seriesToEdit.id,
+      title: editTitle.trim(),
+      releaseYear: isNaN(yearNum as number) ? undefined : yearNum,
+      status: editStatus,
+      rating: editRating,
+      notes: editNotes.trim() || undefined,
+      posterUrl: editPosterUrl.trim() || undefined,
+      genres: editGenres,
+    };
+
+    const ok = await updateSeries(input);
+    if (ok) {
+      setIsEditModalOpen(false);
+      setSeriesToEdit(null);
+    }
+  };
+
+  // Open Delete Modal
+  const handleOpenDeleteModal = (s: SeriesDetail, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setSeriesToDelete(s);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!seriesToDelete) return;
+    await deleteSeries(seriesToDelete.id);
+    setIsDeleteModalOpen(false);
+    setSeriesToDelete(null);
+  };
+
+  // Episode Toggle
+  const handleToggleEpisode = async (episodeId: string, currentCompleted: boolean) => {
+    const nextState = !currentCompleted;
+    const result = await toggleEpisode(episodeId, nextState);
+    if (result.seriesCompleted && selectedSeries) {
+      // Trigger completion dialog and rating prompt!
+      setCompletedSeriesId(selectedSeries.id);
+      setCompletionRating(selectedSeries.rating || 9.0);
+      setIsCompletionModalOpen(true);
+    }
+  };
+
+  // Rename Episode
+  const handleOpenEditEpisode = (episodeId: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingEpisodeId(episodeId);
+    setEditingEpisodeTitle(currentTitle);
+    setIsEditEpModalOpen(true);
+  };
+
+  const handleSaveEpisodeTitle = async () => {
+    if (!editingEpisodeId || !editingEpisodeTitle.trim()) return;
+    await updateEpisodeTitle(editingEpisodeId, editingEpisodeTitle.trim());
+    setIsEditEpModalOpen(false);
+    setEditingEpisodeId(null);
+  };
+
+  // Add Season to selected series
+  const handleConfirmAddSeason = async () => {
+    if (!selectedSeries) return;
+    const count = parseInt(newSeasonEpCount, 10) || 10;
+    const added = await addSeason(selectedSeries.id, count);
+    if (added) {
+      setSelectedSeasonNumber(added.seasonNumber);
+      setIsAddSeasonModalOpen(false);
+    }
+  };
+
+  // Delete Season
+  const handleDeleteActiveSeason = async () => {
+    if (!activeSeason || !selectedSeries) return;
+    if (selectedSeries.seasons.length <= 1) {
+      alert("A series must have at least one season.");
+      return;
+    }
+    const confirm = window.confirm(
+      `Are you sure you want to delete ${activeSeason.title}? All episodes in this season will be deleted.`
+    );
+    if (confirm) {
+      await deleteSeason(activeSeason.id);
+      setSelectedSeasonNumber(1);
+    }
+  };
+
+  // Add Episode to active season
+  const handleConfirmAddEpisode = async () => {
+    if (!activeSeason) return;
+    await addEpisode(activeSeason.id, newEpTitle.trim() || undefined);
+    setNewEpTitle("");
+    setIsAddEpModalOpen(false);
+  };
+
+  // Delete Episode
+  const handleDeleteEpisode = async (episodeId: string, title: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const confirm = window.confirm(`Permanently remove episode "${title}"?`);
+    if (confirm) {
+      await deleteEpisode(episodeId);
+    }
+  };
+
+  // Save Completion Rating
+  const handleSaveCompletionRating = async () => {
+    if (!completedSeriesId) return;
+    await rateSeries(completedSeriesId, completionRating);
+    setIsCompletionModalOpen(false);
+    setCompletedSeriesId(null);
   };
 
   return (
@@ -128,7 +389,7 @@ export const SeriesPage: React.FC = () => {
           <Button
             variant="primary"
             size="md"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenCreateModal}
             icon={<Plus className="w-4 h-4" />}
           >
             Add Series
@@ -142,20 +403,41 @@ export const SeriesPage: React.FC = () => {
            DETAIL VIEW: Selected Series Hierarchical Season/Episodes
            ======================================================== */
         <div className="space-y-6 animate-fadeIn">
-          {/* Breadcrumb / Back button */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={handleBackToSeriesList}
-              icon={<ArrowLeft className="w-3.5 h-3.5" />}
-            >
-              Back to All Series
-            </Button>
-            <span className="text-slate-400 text-xs">/</span>
-            <span className="text-xs font-semibold text-slate-200">
-              {selectedSeries.title}
-            </span>
+          {/* Breadcrumb / Back button & Actions */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleBackToSeriesList}
+                icon={<ArrowLeft className="w-3.5 h-3.5" />}
+              >
+                Back to All Series
+              </Button>
+              <span className="text-slate-400 text-xs">/</span>
+              <span className="text-xs font-semibold text-slate-200">
+                {selectedSeries.title}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => handleOpenEditModal(selectedSeries, e)}
+                icon={<Edit2 className="w-3.5 h-3.5" />}
+              >
+                Edit Series
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={(e) => handleOpenDeleteModal(selectedSeries, e)}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
 
           {/* Series Hero Card */}
@@ -180,21 +462,32 @@ export const SeriesPage: React.FC = () => {
                       <span>{selectedSeries.rating.toFixed(1)} / 10</span>
                     </div>
                   )}
+                  {selectedSeries.releaseYear && (
+                    <span className="text-xs text-slate-400 font-mono">
+                      ({selectedSeries.releaseYear})
+                    </span>
+                  )}
                 </div>
 
                 <h2 className="text-2xl font-extrabold text-slate-100">
                   {selectedSeries.title}
                 </h2>
 
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-                  <span className="flex items-center gap-1">
+                {selectedSeries.notes && (
+                  <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                    {selectedSeries.notes}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 pt-1">
+                  <span className="flex items-center gap-1 font-medium text-slate-300">
                     <Layers className="w-3.5 h-3.5 text-teal-400" />
                     {selectedSeries.totalSeasons} Seasons
                   </span>
                   <span>•</span>
                   <span>{selectedSeries.totalEpisodes} Total Episodes</span>
                   <span>•</span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-1">
                     {selectedSeries.genres.map((g) => (
                       <span
                         key={g}
@@ -218,81 +511,105 @@ export const SeriesPage: React.FC = () => {
                 <ProgressBar
                   value={selectedSeries.completedEpisodes}
                   max={selectedSeries.totalEpisodes || 1}
-                  variant="teal"
+                  variant={selectedSeries.status === "completed" ? "emerald" : "teal"}
                   size="md"
                 />
                 <p className="text-[10px] text-slate-500 text-right">
-                  {Math.round(
-                    (selectedSeries.completedEpisodes /
-                      (selectedSeries.totalEpisodes || 1)) *
-                      100
-                  )}
-                  % Cumulative Completion
+                  {seriesCumulativeProgress}% Cumulative Completion
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Season Selector Tabs */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-charcoal-700">
-            {selectedSeries.seasons.map((season) => {
-              const isSeasonActive =
-                season.seasonNumber === selectedSeasonNumber;
-              const seasonCompletedCount = season.episodes.filter(
-                (e) => e.isCompleted
-              ).length;
-              return (
-                <button
-                  key={season.id}
-                  onClick={() => setSelectedSeasonNumber(season.seasonNumber)}
-                  className={cn(
-                    "flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
-                    isSeasonActive
-                      ? "bg-teal-500 text-charcoal-950 font-bold shadow-md"
-                      : "bg-charcoal-800 text-slate-300 hover:bg-charcoal-700 hover:text-white border border-charcoal-700"
-                  )}
-                >
-                  <span>Season {season.seasonNumber}</span>
-                  <span
+          {/* Season Selector Tabs & Add Season Action */}
+          <div className="flex items-center justify-between gap-4 border-b border-charcoal-700 pb-2">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {selectedSeries.seasons.map((season) => {
+                const isSeasonActive =
+                  season.seasonNumber === selectedSeasonNumber;
+                const seasonCompletedCount = season.episodes.filter(
+                  (e) => e.isCompleted
+                ).length;
+                return (
+                  <button
+                    key={season.id}
+                    onClick={() => setSelectedSeasonNumber(season.seasonNumber)}
                     className={cn(
-                      "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                      "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer whitespace-nowrap",
                       isSeasonActive
-                        ? "bg-charcoal-950/20 text-charcoal-950 font-bold"
-                        : "bg-charcoal-900 text-slate-400"
+                        ? "bg-teal-500 text-charcoal-950 font-bold shadow-md"
+                        : "bg-charcoal-800 text-slate-300 hover:bg-charcoal-700 hover:text-white border border-charcoal-700"
                     )}
                   >
-                    {seasonCompletedCount}/{season.episodes.length}
-                  </span>
-                </button>
-              );
-            })}
+                    <span>Season {season.seasonNumber}</span>
+                    <span
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-full font-mono",
+                        isSeasonActive
+                          ? "bg-charcoal-950/20 text-charcoal-950 font-bold"
+                          : "bg-charcoal-900 text-slate-400"
+                      )}
+                    >
+                      {seasonCompletedCount}/{season.episodes.length}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsAddSeasonModalOpen(true)}
+              icon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Add Season
+            </Button>
           </div>
 
           {/* Active Season Episodes List */}
           {activeSeason && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-base font-bold text-slate-100">
-                    {activeSeason.title || `Season ${activeSeason.seasonNumber}`}
+                  <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span>{activeSeason.title || `Season ${activeSeason.seasonNumber}`}</span>
+                    <button
+                      onClick={handleDeleteActiveSeason}
+                      className="text-xs text-rose-400 hover:text-rose-300 transition-colors p-1"
+                      title="Delete Season"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </h3>
                   <p className="text-xs text-slate-400">
                     {activeSeason.episodes.length} episodes • {activeSeasonProgress}% watched
                   </p>
                 </div>
-                <div className="w-48 hidden sm:block">
-                  <ProgressBar
-                    value={activeSeasonProgress}
-                    max={100}
-                    variant="emerald"
+
+                <div className="flex items-center gap-3">
+                  <div className="w-40 hidden sm:block">
+                    <ProgressBar
+                      value={activeSeasonProgress}
+                      max={100}
+                      variant="emerald"
+                      size="sm"
+                      showPercent
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
                     size="sm"
-                    showPercent
-                  />
+                    onClick={() => setIsAddEpModalOpen(true)}
+                    icon={<Plus className="w-3.5 h-3.5" />}
+                  >
+                    Add Episode
+                  </Button>
                 </div>
               </div>
 
               {/* Episode Items */}
-              <div className="rounded-xl border border-charcoal-700 divide-y divide-charcoal-700/60 bg-charcoal-800/80 overflow-hidden">
+              <div className="rounded-xl border border-charcoal-700 divide-y divide-charcoal-700/60 bg-charcoal-800/80 overflow-hidden shadow-md">
                 {activeSeason.episodes.map((ep) => {
                   const sPrefix = String(activeSeason.seasonNumber).padStart(2, "0");
                   const ePrefix = String(ep.episodeNumber).padStart(2, "0");
@@ -301,22 +618,22 @@ export const SeriesPage: React.FC = () => {
                   return (
                     <div
                       key={ep.id}
-                      onClick={() => toggleEpisode(ep.id, !ep.isCompleted)}
+                      onClick={() => handleToggleEpisode(ep.id, ep.isCompleted)}
                       className={cn(
-                        "flex items-center justify-between p-3.5 transition-colors cursor-pointer select-none",
+                        "group flex items-center justify-between p-3.5 transition-colors cursor-pointer select-none",
                         ep.isCompleted
-                          ? "bg-charcoal-850/50 hover:bg-charcoal-850/80"
-                          : "hover:bg-charcoal-750"
+                          ? "bg-charcoal-850/50 hover:bg-charcoal-850/80 text-slate-500"
+                          : "hover:bg-charcoal-750 text-slate-200"
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
                         <button
                           type="button"
                           className={cn(
-                            "w-5 h-5 rounded-full flex items-center justify-center transition-all",
+                            "w-5 h-5 rounded-full flex items-center justify-center transition-all shrink-0",
                             ep.isCompleted
                               ? "text-emerald-400"
-                              : "text-slate-500 hover:text-teal-400"
+                              : "text-slate-500 group-hover:text-teal-400"
                           )}
                         >
                           {ep.isCompleted ? (
@@ -326,14 +643,14 @@ export const SeriesPage: React.FC = () => {
                           )}
                         </button>
 
-                        <span className="font-mono text-xs font-bold text-teal-400/90 w-16">
+                        <span className="font-mono text-xs font-bold text-teal-400/90 w-16 shrink-0">
                           {epCode}
                         </span>
 
-                        <div>
+                        <div className="min-w-0 flex-1">
                           <p
                             className={cn(
-                              "text-xs font-medium transition-colors",
+                              "text-xs font-medium transition-colors truncate",
                               ep.isCompleted
                                 ? "line-through text-slate-500 font-normal"
                                 : "text-slate-100"
@@ -342,14 +659,34 @@ export const SeriesPage: React.FC = () => {
                             {ep.title}
                           </p>
                           {ep.notes && (
-                            <p className="text-[11px] text-slate-500 italic">
+                            <p className="text-[11px] text-slate-500 italic truncate">
                               {ep.notes}
                             </p>
                           )}
                         </div>
+
+                        {/* Inline Edit episode button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleOpenEditEpisode(ep.id, ep.title, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-teal-300 transition-opacity"
+                          title="Rename Episode"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+
+                        {/* Delete Episode button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteEpisode(ep.id, ep.title, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity"
+                          title="Delete Episode"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 shrink-0">
                         {ep.isCompleted && ep.completedAt && (
                           <span className="text-[10px] font-mono text-slate-500 hidden sm:inline">
                             Watched: {ep.completedAt.slice(0, 10)}
@@ -375,19 +712,57 @@ export const SeriesPage: React.FC = () => {
         </div>
       ) : (
         /* ========================================================
-           OVERVIEW: Series Cards Catalog Grid
+           OVERVIEW: Series Cards Catalog Grid & Filter Bar
            ======================================================== */
-        <div className="space-y-4">
-          {/* Search bar */}
-          <div className="max-w-md">
-            <Input
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Search series by title or genre..."
-              icon={Search}
-              clearable
-              inputSize="sm"
-            />
+        <div className="space-y-6">
+          {/* Status Tabs Bar & Search */}
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-charcoal-700 pb-3">
+            {/* Status Segmented Tabs */}
+            <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-charcoal-800/80 border border-slate-200/80 dark:border-charcoal-700/80">
+              {(["all", "watching", "completed", "planned"] as SeriesFilter[]).map(
+                (tab) => {
+                  const isActive = statusFilter === tab;
+                  const count = counts[tab];
+                  const label = tab.charAt(0).toUpperCase() + tab.slice(1);
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setStatusFilter(tab)}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
+                        isActive
+                          ? "bg-white dark:bg-charcoal-700 text-teal-600 dark:text-teal-400 shadow-sm font-semibold border border-slate-200/60 dark:border-charcoal-600"
+                          : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                      )}
+                    >
+                      <span>{label}</span>
+                      <span
+                        className={cn(
+                          "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                          isActive
+                            ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold"
+                            : "bg-slate-200 dark:bg-charcoal-600 text-slate-500 dark:text-slate-400"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+
+            {/* Search bar */}
+            <div className="w-full sm:w-72">
+              <Input
+                value={searchQuery}
+                onChange={setSearchQuery}
+                placeholder="Search series by title or genre..."
+                icon={Search}
+                clearable
+                inputSize="sm"
+              />
+            </div>
           </div>
 
           {loading && (
@@ -415,7 +790,7 @@ export const SeriesPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => setIsAddModalOpen(true)}
+                onClick={handleOpenCreateModal}
                 icon={<Plus className="w-3.5 h-3.5" />}
               >
                 Add First Series
@@ -439,31 +814,42 @@ export const SeriesPage: React.FC = () => {
                     <div>
                       {/* Card Header */}
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-10 h-10 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center border border-teal-500/20 group-hover:scale-105 transition-transform">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-lg bg-teal-500/10 text-teal-400 flex items-center justify-center border border-teal-500/20 group-hover:scale-105 transition-transform shrink-0">
                             <Tv className="w-5 h-5" />
                           </div>
                           <div>
                             <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 group-hover:text-teal-400 transition-colors">
                               {s.title}
                             </h3>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                              {s.totalSeasons} Seasons • {s.totalEpisodes} Episodes
-                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                              <span>{s.totalSeasons} Seasons</span>
+                              <span>•</span>
+                              <span>{s.totalEpisodes} Episodes</span>
+                              {s.releaseYear && <span>• ({s.releaseYear})</span>}
+                            </div>
                           </div>
                         </div>
 
-                        <Badge
-                          variant={
-                            s.status === "completed"
-                              ? "success"
-                              : s.status === "watching"
-                              ? "teal"
-                              : "amber"
-                          }
-                        >
-                          {s.status}
-                        </Badge>
+                        <div className="flex items-center gap-1.5">
+                          {s.rating && (
+                            <span className="flex items-center gap-1 text-[11px] font-bold text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
+                              <Star className="w-3 h-3 fill-amber-400" />
+                              {s.rating.toFixed(1)}
+                            </span>
+                          )}
+                          <Badge
+                            variant={
+                              s.status === "completed"
+                                ? "success"
+                                : s.status === "watching"
+                                ? "teal"
+                                : "amber"
+                            }
+                          >
+                            {s.status}
+                          </Badge>
+                        </div>
                       </div>
 
                       {/* Genre pills */}
@@ -495,7 +881,26 @@ export const SeriesPage: React.FC = () => {
                         variant={s.status === "completed" ? "emerald" : "teal"}
                         size="sm"
                       />
-                      <div className="flex items-center justify-end pt-1">
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenEditModal(s, e)}
+                            className="p-1 rounded text-slate-400 hover:text-teal-400 hover:bg-charcoal-700 transition-colors"
+                            title="Edit Series"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => handleOpenDeleteModal(s, e)}
+                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-charcoal-700 transition-colors"
+                            title="Delete Series"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
                         <span className="text-[11px] font-semibold text-teal-400 flex items-center gap-1 group-hover:translate-x-1 transition-transform">
                           Track Episodes <ChevronRight className="w-3.5 h-3.5" />
                         </span>
@@ -509,13 +914,15 @@ export const SeriesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add Series Modal */}
+      {/* ========================================================
+         ADD SERIES MODAL (With Per-Season Episode Count Config)
+         ======================================================== */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         title="Add Television Series"
-        description="Configure total seasons and episode structures. Individual episode checklists are generated automatically."
-        size="md"
+        description="Configure metadata, total seasons, and episode counts per season. Individual episode lists are generated automatically."
+        size="lg"
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button
@@ -542,56 +949,257 @@ export const SeriesPage: React.FC = () => {
             label="Series Title *"
             value={newTitle}
             onChange={setNewTitle}
-            placeholder="e.g. Severance"
+            placeholder="e.g. Severance, Breaking Bad"
             required
             autoFocus
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              label="Total Seasons"
-              value={newSeasonsCount}
-              onChange={setNewSeasonsCount}
+              label="Release Year"
+              value={newReleaseYear}
+              onChange={setNewReleaseYear}
               type="number"
-              placeholder="e.g. 2"
+              placeholder="e.g. 2022"
             />
-            <Input
-              label="Episodes Per Season"
-              value={newEpisodesPerSeason}
-              onChange={setNewEpisodesPerSeason}
-              type="number"
-              placeholder="e.g. 9"
-            />
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Initial Status
+              </label>
+              <select
+                value={newStatus}
+                onChange={(e) => setNewStatus(e.target.value as SeriesStatus)}
+                className="w-full text-xs py-2 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              >
+                <option value="watching">Currently Watching</option>
+                <option value="planned">Plan to Watch</option>
+                <option value="completed">Completed Series</option>
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Current Status
-            </label>
-            <select
-              value={newStatus}
-              onChange={(e) => setNewStatus(e.target.value as SeriesStatus)}
-              className="w-full text-xs py-2 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
-            >
-              <option value="watching">Currently Watching</option>
-              <option value="planned">Plan to Watch</option>
-              <option value="completed">Completed Series</option>
-            </select>
+          <Input
+            label="Synopsis / Notes (Optional)"
+            value={newNotes}
+            onChange={setNewNotes}
+            placeholder="Premise, cast notes, or personal impressions..."
+          />
+
+          {/* Season-by-Season Episode Configuration */}
+          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-charcoal-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Season & Episode Configuration
+                </label>
+                <p className="text-[11px] text-slate-500">
+                  Configure episodes separately for each season.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddSeasonConfig}
+                icon={<Plus className="w-3.5 h-3.5" />}
+              >
+                Add Season
+              </Button>
+            </div>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {seasonConfigs.map((cfg, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-slate-50 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700"
+                >
+                  <span className="font-mono text-xs font-bold text-teal-400 w-20">
+                    Season {cfg.seasonNumber}
+                  </span>
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-xs text-slate-400">Episodes:</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={cfg.episodeCount}
+                      onChange={(e) => handleUpdateSeasonEpCount(idx, e.target.value)}
+                      className="w-20 px-2 py-1 text-xs rounded border border-slate-200 dark:border-charcoal-600 bg-white dark:bg-charcoal-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                    />
+                  </div>
+                  {seasonConfigs.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSeasonConfig(idx)}
+                      className="p-1 text-slate-400 hover:text-rose-400 transition-colors"
+                      title="Remove season"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Genres
+          {/* Genres Tag Selector */}
+          <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-charcoal-700">
+            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+              Genres & Tags
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {["Sci-Fi", "Drama", "Mystery", "Thriller", "Crime", "Comedy"].map(
-                (g) => {
-                  const isSelected = newGenres.includes(g);
+              {PRESET_GENRES.map((g) => {
+                const isSelected = newGenres.includes(g);
+                return (
+                  <button
+                    type="button"
+                    key={g}
+                    onClick={() => toggleGenre(g)}
+                    className={cn(
+                      "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                      isSelected
+                        ? "bg-teal-500 text-charcoal-950 font-bold"
+                        : "bg-slate-100 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                    )}
+                  >
+                    {g}
+                  </button>
+                );
+              })}
+            </div>
+            {/* Custom Genre Input */}
+            <div className="flex items-center gap-2 pt-1.5">
+              <input
+                type="text"
+                placeholder="Custom genre tag..."
+                value={customGenre}
+                onChange={(e) => setCustomGenre(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomGenre();
+                  }
+                }}
+                className="text-xs px-2.5 py-1 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddCustomGenre}
+                disabled={!customGenre.trim()}
+              >
+                Add Tag
+              </Button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* ========================================================
+         EDIT SERIES MODAL
+         ======================================================== */}
+      {seriesToEdit && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          title={`Edit Series: ${seriesToEdit.title}`}
+          description="Update series metadata, release year, viewing status, and personal rating."
+          size="md"
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleEditSeriesSubmit}
+                icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+              >
+                Save Changes
+              </Button>
+            </div>
+          }
+        >
+          <form onSubmit={handleEditSeriesSubmit} className="space-y-4">
+            <Input
+              label="Series Title *"
+              value={editTitle}
+              onChange={setEditTitle}
+              required
+            />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Release Year"
+                value={editReleaseYear}
+                onChange={setEditReleaseYear}
+                type="number"
+              />
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as SeriesStatus)}
+                  className="w-full text-xs py-2 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                >
+                  <option value="watching">Currently Watching</option>
+                  <option value="planned">Plan to Watch</option>
+                  <option value="completed">Completed Series</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Rating out of 10 slider */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs font-medium text-slate-700 dark:text-slate-300">
+                <span>Personal Rating out of 10</span>
+                <span className="font-bold text-amber-400 font-mono">
+                  {editRating.toFixed(1)} / 10
+                </span>
+              </div>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="0.1"
+                value={editRating}
+                onChange={(e) => setEditRating(parseFloat(e.target.value))}
+                className="w-full accent-teal-500 cursor-pointer"
+              />
+            </div>
+
+            <Input
+              label="Synopsis / Notes"
+              value={editNotes}
+              onChange={setEditNotes}
+              placeholder="Notes or review comments..."
+            />
+
+            {/* Edit Genres */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                Genres
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {PRESET_GENRES.map((g) => {
+                  const isSelected = editGenres.includes(g);
                   return (
                     <button
                       type="button"
                       key={g}
-                      onClick={() => toggleGenre(g)}
+                      onClick={() =>
+                        setEditGenres((prev) =>
+                          prev.includes(g) ? prev.filter((item) => item !== g) : [...prev, g]
+                        )
+                      }
                       className={cn(
                         "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
                         isSelected
@@ -602,12 +1210,252 @@ export const SeriesPage: React.FC = () => {
                       {g}
                     </button>
                   );
-                }
-              )}
+                })}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  placeholder="Add custom genre..."
+                  value={editCustomGenre}
+                  onChange={(e) => setEditCustomGenre(e.target.value)}
+                  className="text-xs px-2.5 py-1 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (editCustomGenre.trim() && !editGenres.includes(editCustomGenre.trim())) {
+                      setEditGenres((prev) => [...prev, editCustomGenre.trim()]);
+                      setEditCustomGenre("");
+                    }
+                  }}
+                  disabled={!editCustomGenre.trim()}
+                >
+                  Add
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* ========================================================
+         DELETE SERIES CONFIRMATION MODAL
+         ======================================================== */}
+      {seriesToDelete && (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          title="Delete Television Series"
+          size="sm"
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDeleteModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleConfirmDelete}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete Series
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-rose-200">Permanent Record Removal</p>
+              <p className="mt-1 leading-relaxed">
+                Permanently delete <span className="font-semibold text-white">"{seriesToDelete.title}"</span> and all its seasons and episode watch records?
+              </p>
             </div>
           </div>
-        </form>
+        </Modal>
+      )}
+
+      {/* ========================================================
+         EDIT EPISODE TITLE MODAL
+         ======================================================== */}
+      <Modal
+        isOpen={isEditEpModalOpen}
+        onClose={() => setIsEditEpModalOpen(false)}
+        title="Rename Episode"
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsEditEpModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveEpisodeTitle}
+              disabled={!editingEpisodeTitle.trim()}
+              icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+            >
+              Save Title
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Episode Title"
+            value={editingEpisodeTitle}
+            onChange={setEditingEpisodeTitle}
+            placeholder="e.g. Good News About Hell"
+            autoFocus
+          />
+        </div>
+      </Modal>
+
+      {/* ========================================================
+         ADD SEASON MODAL
+         ======================================================== */}
+      <Modal
+        isOpen={isAddSeasonModalOpen}
+        onClose={() => setIsAddSeasonModalOpen(false)}
+        title="Add New Season"
+        description="Creates the next sequential season and generates initial episode checklists."
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddSeasonModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleConfirmAddSeason}
+              icon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Create Season
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Initial Episode Count"
+            value={newSeasonEpCount}
+            onChange={setNewSeasonEpCount}
+            type="number"
+            min={1}
+            max={100}
+            autoFocus
+          />
+        </div>
+      </Modal>
+
+      {/* ========================================================
+         ADD EPISODE MODAL
+         ======================================================== */}
+      <Modal
+        isOpen={isAddEpModalOpen}
+        onClose={() => setIsAddEpModalOpen(false)}
+        title={`Add Episode to Season ${activeSeason?.seasonNumber}`}
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsAddEpModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleConfirmAddEpisode}
+              icon={<Plus className="w-3.5 h-3.5" />}
+            >
+              Add Episode
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <Input
+            label="Episode Title (Optional)"
+            value={newEpTitle}
+            onChange={setNewEpTitle}
+            placeholder={`e.g. Episode ${(activeSeason?.episodes.length || 0) + 1}`}
+            autoFocus
+          />
+        </div>
+      </Modal>
+
+      {/* ========================================================
+         AUTOMATIC COMPLETION CELEBRATION & RATING PROMPT
+         ======================================================== */}
+      <Modal
+        isOpen={isCompletionModalOpen}
+        onClose={() => setIsCompletionModalOpen(false)}
+        title="🎉 Series Completed!"
+        description="Every episode has been checked off! How would you rate this series overall?"
+        size="sm"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsCompletionModalOpen(false)}
+            >
+              Skip
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleSaveCompletionRating}
+              icon={<Star className="w-3.5 h-3.5 fill-amber-400" />}
+            >
+              Save Rating
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4 text-center py-2">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+
+          <div>
+            <span className="text-3xl font-extrabold text-amber-400 font-mono">
+              {completionRating.toFixed(1)}
+            </span>
+            <span className="text-xs text-slate-400 font-bold ml-1">/ 10</span>
+          </div>
+
+          <input
+            type="range"
+            min="1"
+            max="10"
+            step="0.1"
+            value={completionRating}
+            onChange={(e) => setCompletionRating(parseFloat(e.target.value))}
+            className="w-full accent-amber-500 cursor-pointer"
+          />
+        </div>
       </Modal>
     </div>
   );
 };
+
+export default SeriesPage;

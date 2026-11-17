@@ -1022,7 +1022,8 @@ pub fn get_series(state: State<'_, AppState>) -> Result<Vec<SeriesDetail>, Strin
                 s.id, s.title, s.status, s.total_seasons, s.personal_rating,
                 (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id) AS total_episodes,
                 (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id AND e.is_completed = 1) AS completed_episodes,
-                (SELECT GROUP_CONCAT(g.name, ',') FROM series_genres sg JOIN genres g ON sg.genre_id = g.id WHERE sg.series_id = s.id) AS genres_csv
+                (SELECT GROUP_CONCAT(g.name, ',') FROM series_genres sg JOIN genres g ON sg.genre_id = g.id WHERE sg.series_id = s.id) AS genres_csv,
+                s.release_year, s.poster_url, s.notes
             FROM series s
             ORDER BY s.title ASC
             "#,
@@ -1050,6 +1051,9 @@ pub fn get_series(state: State<'_, AppState>) -> Result<Vec<SeriesDetail>, Strin
                 progress_text,
                 rating: row.get(4)?,
                 genres,
+                release_year: row.get(8)?,
+                poster_url: row.get(9)?,
+                notes: row.get(10)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -1070,7 +1074,7 @@ pub fn get_series_detail(
         .map_err(|e| format!("Database lock error: {}", e))?;
 
     // 1. Fetch Series info
-    let (title, status, total_seasons, rating, genres_csv, total_eps, comp_eps): (
+    let (title, status, total_seasons, rating, genres_csv, total_eps, comp_eps, release_year, poster_url, notes): (
         String,
         String,
         i32,
@@ -1078,6 +1082,9 @@ pub fn get_series_detail(
         Option<String>,
         i64,
         i64,
+        Option<i32>,
+        Option<String>,
+        Option<String>,
     ) = conn
         .query_row(
             r#"
@@ -1085,7 +1092,8 @@ pub fn get_series_detail(
                 s.title, s.status, s.total_seasons, s.personal_rating,
                 (SELECT GROUP_CONCAT(g.name, ',') FROM series_genres sg JOIN genres g ON sg.genre_id = g.id WHERE sg.series_id = s.id),
                 (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id),
-                (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id AND e.is_completed = 1)
+                (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id AND e.is_completed = 1),
+                s.release_year, s.poster_url, s.notes
             FROM series s
             WHERE s.id = ?1
             "#,
@@ -1099,6 +1107,9 @@ pub fn get_series_detail(
                     r.get(4)?,
                     r.get(5)?,
                     r.get(6)?,
+                    r.get(7)?,
+                    r.get(8)?,
+                    r.get(9)?,
                 ))
             },
         )
@@ -1160,8 +1171,253 @@ pub fn get_series_detail(
         progress_text: format!("{}/{} Episodes", comp_eps, total_eps),
         rating,
         genres,
+        release_year,
+        poster_url,
+        notes,
         seasons,
     })
+}
+
+#[tauri::command]
+pub fn create_series(
+    state: State<'_, AppState>,
+    input: CreateSeriesInput,
+) -> Result<SeriesFull, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let series_id = format!("ser-{}", uuid::Uuid::new_v4());
+    let total_seasons = input.seasons.len() as i32;
+    let status = input.status.unwrap_or_else(|| "watching".to_string());
+
+    conn.execute(
+        r#"
+        INSERT INTO series (id, title, release_year, poster_url, status, total_seasons, notes, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'), datetime('now'))
+        "#,
+        rusqlite::params![
+            series_id,
+            input.title,
+            input.release_year,
+            input.poster_url,
+            status,
+            total_seasons,
+            input.notes,
+        ],
+    )
+    .map_err(|e| format!("Failed to insert series: {}", e))?;
+
+    // Handle genres junction
+    if let Some(genres) = input.genres {
+        for genre_name in genres {
+            let trimmed = genre_name.trim();
+            if !trimmed.is_empty() {
+                let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                    rusqlite::params![genre_id, trimmed],
+                );
+                let actual_genre_id: String = conn
+                    .query_row(
+                        "SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE",
+                        [trimmed],
+                        |r| r.get(0),
+                    )
+                    .unwrap_or(genre_id);
+
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO series_genres (series_id, genre_id) VALUES (?1, ?2)",
+                    rusqlite::params![series_id, actual_genre_id],
+                );
+            }
+        }
+    }
+
+    // Insert Seasons and Episodes
+    let mut seasons_result = Vec::new();
+    let mut total_eps: i64 = 0;
+
+    for s_config in input.seasons {
+        let season_id = format!("sea-{}-{}", series_id, s_config.season_number);
+        conn.execute(
+            r#"
+            INSERT INTO seasons (id, series_id, season_number, total_episodes, created_at)
+            VALUES (?1, ?2, ?3, ?4, datetime('now'))
+            "#,
+            rusqlite::params![
+                season_id,
+                series_id,
+                s_config.season_number,
+                s_config.episode_count,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert season: {}", e))?;
+
+        let mut episodes = Vec::new();
+        for ep_num in 1..=s_config.episode_count {
+            let ep_id = format!("ep-{}-{}-{}", series_id, s_config.season_number, ep_num);
+            let ep_title = s_config
+                .episode_titles
+                .as_ref()
+                .and_then(|titles| titles.get((ep_num - 1) as usize).cloned())
+                .filter(|t| !t.trim().is_empty())
+                .unwrap_or_else(|| format!("Episode {}", ep_num));
+
+            conn.execute(
+                r#"
+                INSERT INTO episodes (id, season_id, series_id, episode_number, title, is_completed, created_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, 0, datetime('now'))
+                "#,
+                rusqlite::params![ep_id, season_id, series_id, ep_num, ep_title],
+            )
+            .map_err(|e| format!("Failed to insert episode: {}", e))?;
+
+            episodes.push(EpisodeDetail {
+                id: ep_id,
+                episode_number: ep_num,
+                title: ep_title,
+                is_completed: false,
+                completed_at: None,
+            });
+            total_eps += 1;
+        }
+
+        seasons_result.push(SeasonDetail {
+            id: season_id,
+            season_number: s_config.season_number,
+            title: format!("Season {}", s_config.season_number),
+            episodes,
+        });
+    }
+
+    Ok(SeriesFull {
+        id: series_id,
+        title: input.title,
+        status,
+        total_seasons,
+        total_episodes: total_eps,
+        completed_episodes: 0,
+        progress_text: format!("0/{} Episodes", total_eps),
+        rating: None,
+        genres: vec![],
+        release_year: input.release_year,
+        poster_url: input.poster_url,
+        notes: input.notes,
+        seasons: seasons_result,
+    })
+}
+
+#[tauri::command]
+pub fn update_series(
+    state: State<'_, AppState>,
+    input: UpdateSeriesInput,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let is_comp = input.status == "completed";
+    let date_completed = if is_comp {
+        Some(Utc::now().format("%Y-%m-%d").to_string())
+    } else {
+        None
+    };
+
+    conn.execute(
+        r#"
+        UPDATE series
+        SET title = ?1, release_year = ?2, status = ?3, personal_rating = ?4, notes = ?5, poster_url = ?6,
+            date_completed = COALESCE(?7, date_completed),
+            updated_at = datetime('now')
+        WHERE id = ?8
+        "#,
+        rusqlite::params![
+            input.title,
+            input.release_year,
+            input.status,
+            input.rating,
+            input.notes,
+            input.poster_url,
+            date_completed,
+            input.id,
+        ],
+    )
+    .map_err(|e| format!("Failed to update series: {}", e))?;
+
+    if let Some(genres) = input.genres {
+        let _ = conn.execute("DELETE FROM series_genres WHERE series_id = ?1", [&input.id]);
+        for genre_name in genres {
+            let trimmed = genre_name.trim();
+            if !trimmed.is_empty() {
+                let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                    rusqlite::params![genre_id, trimmed],
+                );
+                let actual_genre_id: String = conn
+                    .query_row(
+                        "SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE",
+                        [trimmed],
+                        |r| r.get(0),
+                    )
+                    .unwrap_or(genre_id);
+
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO series_genres (series_id, genre_id) VALUES (?1, ?2)",
+                    rusqlite::params![input.id, actual_genre_id],
+                );
+            }
+        }
+    }
+
+    if is_comp {
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'series_completed', 'series', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, input.id, input.title],
+        );
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn delete_series(
+    state: State<'_, AppState>,
+    series_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute("DELETE FROM series WHERE id = ?1", [&series_id])
+        .map_err(|e| format!("Failed to delete series: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn update_episode_title(
+    state: State<'_, AppState>,
+    episode_id: String,
+    title: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute(
+        "UPDATE episodes SET title = ?1 WHERE id = ?2",
+        rusqlite::params![title.trim(), episode_id],
+    )
+    .map_err(|e| format!("Failed to update episode title: {}", e))?;
+
+    Ok(true)
 }
 
 #[tauri::command]
@@ -1169,17 +1425,27 @@ pub fn toggle_episode_completion(
     state: State<'_, AppState>,
     episode_id: String,
     is_completed: bool,
-) -> Result<bool, String> {
+) -> Result<ToggleEpisodeResult, String> {
     let conn = state
         .db
         .lock()
         .map_err(|e| format!("Database lock error: {}", e))?;
+
     let completed_flag = if is_completed { 1 } else { 0 };
     let completed_at = if is_completed {
         Some(Utc::now().to_rfc3339())
     } else {
         None
     };
+
+    // Get series_id and title
+    let (series_id, ep_title): (String, String) = conn
+        .query_row(
+            "SELECT series_id, title FROM episodes WHERE id = ?1",
+            [&episode_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .map_err(|e| format!("Episode not found: {}", e))?;
 
     conn.execute(
         "UPDATE episodes SET is_completed = ?1, completed_at = ?2 WHERE id = ?3",
@@ -1188,20 +1454,256 @@ pub fn toggle_episode_completion(
     .map_err(|e| e.to_string())?;
 
     if is_completed {
-        let ep_title: String = conn
-            .query_row(
-                "SELECT title FROM episodes WHERE id = ?1",
-                [&episode_id],
-                |r| r.get(0),
-            )
-            .unwrap_or_else(|_| "Episode".to_string());
-
         let act_id = uuid::Uuid::new_v4().to_string();
         let _ = conn.execute(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'episode_completed', 'episode', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, episode_id, ep_title],
         );
     }
+
+    // Check completion progress across all episodes for this series
+    let (total_eps, comp_eps): (i64, i64) = conn
+        .query_row(
+            r#"
+            SELECT 
+                COUNT(*), 
+                SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END)
+            FROM episodes 
+            WHERE series_id = ?1
+            "#,
+            [&series_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap_or((0, 0));
+
+    let mut series_completed = false;
+    if total_eps > 0 && comp_eps == total_eps {
+        // Automatically mark series as completed
+        conn.execute(
+            "UPDATE series SET status = 'completed', date_completed = date('now'), updated_at = datetime('now') WHERE id = ?1",
+            [&series_id],
+        )
+        .map_err(|e| e.to_string())?;
+
+        let series_title: String = conn
+            .query_row("SELECT title FROM series WHERE id = ?1", [&series_id], |r| r.get(0))
+            .unwrap_or_else(|_| "Series".to_string());
+
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'series_completed', 'series', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, series_id, series_title],
+        );
+
+        series_completed = true;
+    } else if !is_completed {
+        // If series was completed, uncomplete it back to watching
+        let current_status: String = conn
+            .query_row("SELECT status FROM series WHERE id = ?1", [&series_id], |r| r.get(0))
+            .unwrap_or_default();
+
+        if current_status == "completed" {
+            let _ = conn.execute(
+                "UPDATE series SET status = 'watching', date_completed = NULL, updated_at = datetime('now') WHERE id = ?1",
+                [&series_id],
+            );
+        }
+    }
+
+    Ok(ToggleEpisodeResult {
+        is_completed,
+        series_completed,
+        total_episodes: total_eps,
+        completed_episodes: comp_eps,
+    })
+}
+
+#[tauri::command]
+pub fn rate_series(
+    state: State<'_, AppState>,
+    series_id: String,
+    rating: f64,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute(
+        "UPDATE series SET personal_rating = ?1, updated_at = datetime('now') WHERE id = ?2",
+        rusqlite::params![rating, series_id],
+    )
+    .map_err(|e| format!("Failed to rate series: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn add_season(
+    state: State<'_, AppState>,
+    series_id: String,
+    episode_count: i32,
+) -> Result<SeasonDetail, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let next_season_num: i32 = conn
+        .query_row(
+            "SELECT COALESCE(MAX(season_number), 0) + 1 FROM seasons WHERE series_id = ?1",
+            [&series_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(1);
+
+    let season_id = format!("sea-{}-{}", series_id, next_season_num);
+
+    conn.execute(
+        "INSERT INTO seasons (id, series_id, season_number, total_episodes, created_at) VALUES (?1, ?2, ?3, ?4, datetime('now'))",
+        rusqlite::params![season_id, series_id, next_season_num, episode_count],
+    )
+    .map_err(|e| format!("Failed to add season: {}", e))?;
+
+    let mut episodes = Vec::new();
+    for ep_num in 1..=episode_count {
+        let ep_id = format!("ep-{}-{}-{}", series_id, next_season_num, ep_num);
+        let ep_title = format!("Episode {}", ep_num);
+
+        conn.execute(
+            "INSERT INTO episodes (id, season_id, series_id, episode_number, title, is_completed, created_at) VALUES (?1, ?2, ?3, ?4, ?5, 0, datetime('now'))",
+            rusqlite::params![ep_id, season_id, series_id, ep_num, ep_title],
+        )
+        .map_err(|e| format!("Failed to add episode: {}", e))?;
+
+        episodes.push(EpisodeDetail {
+            id: ep_id,
+            episode_number: ep_num,
+            title: ep_title,
+            is_completed: false,
+            completed_at: None,
+        });
+    }
+
+    let _ = conn.execute(
+        "UPDATE series SET total_seasons = (SELECT COUNT(*) FROM seasons WHERE series_id = ?1), updated_at = datetime('now') WHERE id = ?1",
+        [&series_id],
+    );
+
+    Ok(SeasonDetail {
+        id: season_id,
+        season_number: next_season_num,
+        title: format!("Season {}", next_season_num),
+        episodes,
+    })
+}
+
+#[tauri::command]
+pub fn delete_season(
+    state: State<'_, AppState>,
+    season_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let series_id: String = conn
+        .query_row(
+            "SELECT series_id FROM seasons WHERE id = ?1",
+            [&season_id],
+            |r| r.get(0),
+        )
+        .map_err(|e| format!("Season not found: {}", e))?;
+
+    conn.execute("DELETE FROM seasons WHERE id = ?1", [&season_id])
+        .map_err(|e| format!("Failed to delete season: {}", e))?;
+
+    let _ = conn.execute(
+        "UPDATE series SET total_seasons = (SELECT COUNT(*) FROM seasons WHERE series_id = ?1), updated_at = datetime('now') WHERE id = ?1",
+        [&series_id],
+    );
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn add_episode(
+    state: State<'_, AppState>,
+    season_id: String,
+    title: Option<String>,
+) -> Result<EpisodeDetail, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let (series_id, season_num): (String, i32) = conn
+        .query_row(
+            "SELECT series_id, season_number FROM seasons WHERE id = ?1",
+            [&season_id],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .map_err(|e| format!("Season not found: {}", e))?;
+
+    let next_ep_num: i32 = conn
+        .query_row(
+            "SELECT COALESCE(MAX(episode_number), 0) + 1 FROM episodes WHERE season_id = ?1",
+            [&season_id],
+            |r| r.get(0),
+        )
+        .unwrap_or(1);
+
+    let ep_id = format!("ep-{}-{}-{}", series_id, season_num, next_ep_num);
+    let ep_title = title
+        .filter(|t| !t.trim().is_empty())
+        .unwrap_or_else(|| format!("Episode {}", next_ep_num));
+
+    conn.execute(
+        "INSERT INTO episodes (id, season_id, series_id, episode_number, title, is_completed, created_at) VALUES (?1, ?2, ?3, ?4, ?5, 0, datetime('now'))",
+        rusqlite::params![ep_id, season_id, series_id, next_ep_num, ep_title],
+    )
+    .map_err(|e| format!("Failed to add episode: {}", e))?;
+
+    let _ = conn.execute(
+        "UPDATE seasons SET total_episodes = (SELECT COUNT(*) FROM episodes WHERE season_id = ?1) WHERE id = ?1",
+        [&season_id],
+    );
+
+    Ok(EpisodeDetail {
+        id: ep_id,
+        episode_number: next_ep_num,
+        title: ep_title,
+        is_completed: false,
+        completed_at: None,
+    })
+}
+
+#[tauri::command]
+pub fn delete_episode(
+    state: State<'_, AppState>,
+    episode_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let season_id: String = conn
+        .query_row(
+            "SELECT season_id FROM episodes WHERE id = ?1",
+            [&episode_id],
+            |r| r.get(0),
+        )
+        .map_err(|e| format!("Episode not found: {}", e))?;
+
+    conn.execute("DELETE FROM episodes WHERE id = ?1", [&episode_id])
+        .map_err(|e| format!("Failed to delete episode: {}", e))?;
+
+    let _ = conn.execute(
+        "UPDATE seasons SET total_episodes = (SELECT COUNT(*) FROM episodes WHERE season_id = ?1) WHERE id = ?1",
+        [&season_id],
+    );
 
     Ok(true)
 }
