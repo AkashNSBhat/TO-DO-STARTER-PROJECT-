@@ -67,19 +67,19 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 3 — Movie Tracker
-- [ ] **3.1 Add movies**: Comprehensive modal with title, release year, genres, notes, and poster.
-- [ ] **3.2 Movie title and information**: Metadata display, overview, runtime, and directors.
-- [ ] **3.3 Genre selection**: Multi-genre tagging per movie.
-- [ ] **3.4 Release year**: Year validation and filtering.
-- [ ] **3.5 Optional posters and descriptions**: Local image storage or URL handling.
-- [ ] **3.6 Planned, Watching and Completed statuses**: Status workflow management.
-- [ ] **3.7 Personal rating out of 10**: Star/numeric rating input with decimal support.
-- [ ] **3.8 Completion date**: Exact watched date recording.
-- [ ] **3.9 Movie details and editing**: Edit all movie metadata and status updates.
-- [ ] **3.10 Movie library**: Filterable grid and list views.
-- [ ] **3.11 Genre, rating and year filters**: Multi-attribute filtering.
-- [ ] **3.12 Search and sorting**: Fast title search and sorting by rating, year, and date added.
-- [ ] **3.13 Database persistence and testing**: Verify database foreign keys, cascade safety, and persistence.
+- [x] **3.1 Add movies**: Comprehensive modal with title, release year, genres, notes, and poster.
+- [x] **3.2 Movie title and information**: Metadata display, overview, runtime, and directors.
+- [x] **3.3 Genre selection**: Multi-genre tagging per movie.
+- [x] **3.4 Release year**: Year validation and filtering.
+- [x] **3.5 Optional posters and descriptions**: Local image storage or URL handling.
+- [x] **3.6 Planned, Watching and Completed statuses**: Status workflow management.
+- [x] **3.7 Personal rating out of 10**: Star/numeric rating input with decimal support.
+- [x] **3.8 Completion date**: Exact watched date recording.
+- [x] **3.9 Movie details and editing**: Edit all movie metadata and status updates.
+- [x] **3.10 Movie library**: Filterable grid and list views.
+- [x] **3.11 Genre, rating and year filters**: Multi-attribute filtering.
+- [x] **3.12 Search and sorting**: Fast title search and sorting by rating, year, and date added.
+- [x] **3.13 Database persistence and testing**: Verify database foreign keys, cascade safety, and persistence.
 
 ---
 

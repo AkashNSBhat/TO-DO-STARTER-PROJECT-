@@ -11,9 +11,19 @@ import {
   CheckCircle2,
   Clock,
   PlayCircle,
+  Edit2,
+  Trash2,
+  AlertTriangle,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useMovies } from "../hooks";
-import { MovieDetail, MovieFilter, MovieStatus } from "../lib/db/types";
+import {
+  MovieDetail,
+  MovieFilter,
+  MovieStatus,
+  CreateMovieInput,
+  UpdateMovieInput,
+} from "../lib/db/types";
 import { Button } from "../components/common/Button";
 import { Badge } from "../components/common/Badge";
 import { Card } from "../components/common/Card";
@@ -29,24 +39,35 @@ export const MoviesPage: React.FC = () => {
     setStatusFilter,
     genreFilter,
     setGenreFilter,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
     availableGenres,
     loading,
     error,
+    createMovie,
+    updateMovie,
+    deleteMovie,
   } = useMovies("all");
 
-  const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
-  const [sortBy, setSortBy] = useState<"title" | "year" | "rating">("rating");
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [movieToEdit, setMovieToEdit] = useState<MovieDetail | null>(null);
+  const [movieToDelete, setMovieToDelete] = useState<MovieDetail | null>(null);
   const [selectedMovie, setSelectedMovie] = useState<MovieDetail | null>(null);
 
-  // New Movie Form State
-  const [newTitle, setNewTitle] = useState("");
-  const [newYear, setNewYear] = useState<string>("2024");
-  const [newStatus, setNewStatus] = useState<MovieStatus>("planned");
-  const [newRating, setNewRating] = useState<string>("8.0");
-  const [newGenres, setNewGenres] = useState<string[]>(["Sci-Fi"]);
-  const [newNotes, setNewNotes] = useState("");
+  // Form State
+  const [title, setTitle] = useState("");
+  const [releaseYear, setReleaseYear] = useState<string>("2024");
+  const [status, setStatus] = useState<MovieStatus>("planned");
+  const [rating, setRating] = useState<string>("8.0");
+  const [dateWatched, setDateWatched] = useState<string>("2026-11-16");
+  const [genres, setGenres] = useState<string[]>(["Sci-Fi"]);
+  const [customGenre, setCustomGenre] = useState("");
+  const [notes, setNewNotes] = useState("");
+  const [posterUrl, setPosterUrl] = useState("");
+  const [formError, setFormError] = useState("");
 
   // Counts for status tabs
   const counts = useMemo(() => {
@@ -58,30 +79,10 @@ export const MoviesPage: React.FC = () => {
     };
   }, [movies]);
 
-  // Search and Sort Filtering
-  const displayedMovies = useMemo(() => {
-    let result = filteredMovies.filter((m) => {
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase();
-      const matchTitle = m.title.toLowerCase().includes(q);
-      const matchNotes = m.notes?.toLowerCase().includes(q) ?? false;
-      const matchGenre = m.genres.some((g) => g.toLowerCase().includes(q));
-      return matchTitle || matchNotes || matchGenre;
-    });
-
-    return result.sort((a, b) => {
-      if (sortBy === "rating") {
-        return (b.rating ?? 0) - (a.rating ?? 0);
-      }
-      if (sortBy === "year") {
-        return (b.releaseYear ?? 0) - (a.releaseYear ?? 0);
-      }
-      return a.title.localeCompare(b.title);
-    });
-  }, [filteredMovies, searchQuery, sortBy]);
-
-  const statusBadgeVariant = (status: MovieStatus): "success" | "teal" | "amber" | "default" => {
-    switch (status) {
+  const statusBadgeVariant = (
+    s: MovieStatus
+  ): "success" | "teal" | "amber" | "default" => {
+    switch (s) {
       case "completed":
         return "success";
       case "watching":
@@ -93,8 +94,8 @@ export const MoviesPage: React.FC = () => {
     }
   };
 
-  const statusIcon = (status: MovieStatus) => {
-    switch (status) {
+  const statusIcon = (s: MovieStatus) => {
+    switch (s) {
       case "completed":
         return <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />;
       case "watching":
@@ -104,33 +105,98 @@ export const MoviesPage: React.FC = () => {
     }
   };
 
-  const handleCreateMovieSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    // Local state addition for responsive client UI
-    const created: MovieDetail = {
-      id: `mov-${Date.now()}`,
-      title: newTitle.trim(),
-      releaseYear: parseInt(newYear, 10) || undefined,
-      status: newStatus,
-      rating: parseFloat(newRating) || undefined,
-      genres: newGenres,
-      notes: newNotes.trim() || undefined,
-      isHistorical: false,
-      dateWatched: newStatus === "completed" ? new Date().toISOString().slice(0, 10) : undefined,
-    };
-
-    movies.unshift(created);
-    setIsAddModalOpen(false);
-    setNewTitle("");
+  const handleOpenCreateModal = () => {
+    setMovieToEdit(null);
+    setTitle("");
+    setReleaseYear("2024");
+    setStatus("planned");
+    setRating("8.0");
+    setDateWatched("2026-11-16");
+    setGenres(["Sci-Fi"]);
     setNewNotes("");
+    setPosterUrl("");
+    setFormError("");
+    setIsModalOpen(true);
   };
 
-  const toggleGenreSelection = (genre: string) => {
-    setNewGenres((prev) =>
+  const handleOpenEditModal = (movie: MovieDetail) => {
+    setMovieToEdit(movie);
+    setTitle(movie.title);
+    setReleaseYear(movie.releaseYear ? String(movie.releaseYear) : "");
+    setStatus(movie.status);
+    setRating(movie.rating !== undefined ? String(movie.rating) : "8.0");
+    setDateWatched(movie.dateWatched || "2026-11-16");
+    setGenres([...movie.genres]);
+    setNewNotes(movie.notes || "");
+    setPosterUrl(movie.posterUrl || "");
+    setFormError("");
+    setIsModalOpen(true);
+    if (selectedMovie) setSelectedMovie(null);
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setFormError("Movie title is required");
+      return;
+    }
+
+    const yearNum = releaseYear.trim() ? parseInt(releaseYear, 10) : undefined;
+    const ratingNum = rating ? parseFloat(rating) : undefined;
+    const dateVal = status === "completed" ? dateWatched : undefined;
+
+    if (movieToEdit) {
+      const updatePayload: UpdateMovieInput = {
+        id: movieToEdit.id,
+        title: title.trim(),
+        releaseYear: yearNum,
+        status,
+        rating: ratingNum,
+        dateWatched: dateVal,
+        genres,
+        notes: notes.trim() || undefined,
+        posterUrl: posterUrl.trim() || undefined,
+      };
+      await updateMovie(updatePayload);
+    } else {
+      const createPayload: CreateMovieInput = {
+        title: title.trim(),
+        releaseYear: yearNum,
+        status,
+        rating: ratingNum,
+        dateWatched: dateVal,
+        isHistorical: false,
+        genres,
+        notes: notes.trim() || undefined,
+        posterUrl: posterUrl.trim() || undefined,
+      };
+      await createMovie(createPayload);
+    }
+
+    setIsModalOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!movieToDelete) return;
+    await deleteMovie(movieToDelete.id);
+    setMovieToDelete(null);
+    if (selectedMovie?.id === movieToDelete.id) {
+      setSelectedMovie(null);
+    }
+  };
+
+  const toggleGenre = (genre: string) => {
+    setGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
+  };
+
+  const handleAddCustomGenre = () => {
+    const trimmed = customGenre.trim();
+    if (trimmed && !genres.includes(trimmed)) {
+      setGenres((prev) => [...prev, trimmed]);
+      setCustomGenre("");
+    }
   };
 
   return (
@@ -155,7 +221,7 @@ export const MoviesPage: React.FC = () => {
           <Button
             variant="primary"
             size="md"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenCreateModal}
             icon={<Plus className="w-4 h-4" />}
           >
             Add Movie
@@ -163,38 +229,41 @@ export const MoviesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Status Segmented Tabs */}
+      {/* Status Segmented Tabs & Filters Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-charcoal-700 pb-3">
+        {/* Status Tabs */}
         <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-charcoal-800/80 border border-slate-200/80 dark:border-charcoal-700/80">
-          {(["all", "planned", "watching", "completed"] as MovieFilter[]).map((tab) => {
-            const isActive = statusFilter === tab;
-            const count = counts[tab];
-            const label = tab.charAt(0).toUpperCase() + tab.slice(1);
-            return (
-              <button
-                key={tab}
-                onClick={() => setStatusFilter(tab)}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
-                  isActive
-                    ? "bg-white dark:bg-charcoal-700 text-teal-600 dark:text-teal-400 shadow-sm font-semibold border border-slate-200/60 dark:border-charcoal-600"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                )}
-              >
-                <span>{label}</span>
-                <span
+          {(["all", "planned", "watching", "completed"] as MovieFilter[]).map(
+            (tab) => {
+              const isActive = statusFilter === tab;
+              const count = counts[tab];
+              const label = tab.charAt(0).toUpperCase() + tab.slice(1);
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setStatusFilter(tab)}
                   className={cn(
-                    "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                    "flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer",
                     isActive
-                      ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold"
-                      : "bg-slate-200 dark:bg-charcoal-600 text-slate-500 dark:text-slate-400"
+                      ? "bg-white dark:bg-charcoal-700 text-teal-600 dark:text-teal-400 shadow-sm font-semibold border border-slate-200/60 dark:border-charcoal-600"
+                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
                   )}
                 >
-                  {count}
-                </span>
-              </button>
-            );
-          })}
+                  <span>{label}</span>
+                  <span
+                    className={cn(
+                      "text-[10px] px-1.5 py-0.2 rounded-full font-mono",
+                      isActive
+                        ? "bg-teal-500/10 text-teal-600 dark:text-teal-400 font-bold"
+                        : "bg-slate-200 dark:bg-charcoal-600 text-slate-500 dark:text-slate-400"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            }
+          )}
         </div>
 
         {/* View Toggle & Sorting Controls */}
@@ -216,11 +285,16 @@ export const MoviesPage: React.FC = () => {
           {/* Sort Filter */}
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "title" | "year" | "rating")}
+            onChange={(e) =>
+              setSortBy(
+                e.target.value as "rating" | "year" | "title" | "dateWatched"
+              )
+            }
             className="text-xs py-1.5 px-2.5 rounded-lg bg-slate-100 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-600 text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
           >
             <option value="rating">Rating (Highest)</option>
             <option value="year">Year (Newest)</option>
+            <option value="dateWatched">Date Watched</option>
             <option value="title">Title (A-Z)</option>
           </select>
 
@@ -259,7 +333,7 @@ export const MoviesPage: React.FC = () => {
         <Input
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by title, director, notes, or genre..."
+          placeholder="Search by title, notes, or genre..."
           icon={Search}
           clearable
           inputSize="sm"
@@ -269,7 +343,7 @@ export const MoviesPage: React.FC = () => {
       {/* Loading Skeleton */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="h-64 rounded-xl bg-slate-100 dark:bg-charcoal-800/50 border border-slate-200 dark:border-charcoal-700/60 animate-pulse"
@@ -286,7 +360,7 @@ export const MoviesPage: React.FC = () => {
       )}
 
       {/* Empty State */}
-      {!loading && displayedMovies.length === 0 && (
+      {!loading && filteredMovies.length === 0 && (
         <Card className="text-center py-16 px-4">
           <div className="w-14 h-14 rounded-2xl bg-teal-500/10 text-teal-400 flex items-center justify-center mx-auto mb-4 border border-teal-500/20">
             <Clapperboard className="w-7 h-7" />
@@ -297,12 +371,12 @@ export const MoviesPage: React.FC = () => {
           <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto mt-1.5 mb-5 leading-relaxed">
             {searchQuery
               ? `No movie titles or notes found containing "${searchQuery}".`
-              : `Your ${statusFilter} list is currently empty. Add your favorite movies to begin tracking.`}
+              : `Your ${statusFilter} list is currently empty. Add films to track.`}
           </p>
           <Button
             variant="primary"
             size="sm"
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenCreateModal}
             icon={<Plus className="w-3.5 h-3.5" />}
           >
             Add First Movie
@@ -311,25 +385,33 @@ export const MoviesPage: React.FC = () => {
       )}
 
       {/* Movies Grid View */}
-      {!loading && viewMode === "grid" && displayedMovies.length > 0 && (
+      {!loading && viewMode === "grid" && filteredMovies.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {displayedMovies.map((movie) => {
+          {filteredMovies.map((movie) => {
             return (
               <div
                 key={movie.id}
                 onClick={() => setSelectedMovie(movie)}
                 className="group relative flex flex-col rounded-xl bg-white dark:bg-charcoal-800/90 border border-slate-200/80 dark:border-charcoal-700/80 hover:border-teal-500/40 dark:hover:border-teal-500/30 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 cursor-pointer overflow-hidden"
               >
-                {/* Poster / Artistic Visual Thumbnail */}
+                {/* Poster / Artwork */}
                 <div
                   className="h-36 w-full relative flex items-center justify-center p-4 bg-gradient-to-br from-charcoal-850 via-charcoal-800 to-charcoal-900 border-b border-slate-100 dark:border-charcoal-700/50"
                   style={{
                     backgroundColor: movie.posterColor || undefined,
                   }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-teal-400 shadow-inner group-hover:scale-105 transition-transform">
-                    <Film className="w-6 h-6" />
-                  </div>
+                  {movie.posterUrl ? (
+                    <img
+                      src={movie.posterUrl}
+                      alt={movie.title}
+                      className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-teal-400 shadow-inner group-hover:scale-105 transition-transform">
+                      <Film className="w-6 h-6" />
+                    </div>
+                  )}
 
                   {/* Rating Badge Overlay */}
                   {movie.rating !== undefined && (
@@ -388,9 +470,30 @@ export const MoviesPage: React.FC = () => {
                       </span>
                     )}
 
-                    <span className="text-[10px] font-medium text-teal-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                      Inspect →
-                    </span>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEditModal(movie);
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-teal-400"
+                        title="Edit Movie"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMovieToDelete(movie);
+                        }}
+                        className="p-1 rounded text-slate-400 hover:text-rose-400"
+                        title="Delete Movie"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -400,7 +503,7 @@ export const MoviesPage: React.FC = () => {
       )}
 
       {/* Movies Table View */}
-      {!loading && viewMode === "table" && displayedMovies.length > 0 && (
+      {!loading && viewMode === "table" && filteredMovies.length > 0 && (
         <div className="rounded-xl border border-slate-200 dark:border-charcoal-700 overflow-hidden bg-white dark:bg-charcoal-800">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
@@ -412,10 +515,11 @@ export const MoviesPage: React.FC = () => {
                   <th className="py-3 px-3">Genres</th>
                   <th className="py-3 px-3 text-center">Rating</th>
                   <th className="py-3 px-4">Watched Date</th>
+                  <th className="py-3 px-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-charcoal-700/60">
-                {displayedMovies.map((movie) => (
+                {filteredMovies.map((movie) => (
                   <tr
                     key={movie.id}
                     onClick={() => setSelectedMovie(movie)}
@@ -458,6 +562,32 @@ export const MoviesPage: React.FC = () => {
                     <td className="py-3 px-4 font-mono text-slate-400 text-[11px]">
                       {movie.dateWatched || "—"}
                     </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEditModal(movie);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-teal-400"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMovieToDelete(movie);
+                          }}
+                          className="p-1 rounded text-slate-400 hover:text-rose-400"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -466,40 +596,48 @@ export const MoviesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Add Movie Modal */}
+      {/* Add / Edit Movie Modal */}
       <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title="Add New Movie"
-        description="Record a film to your planned watchlist, active viewing, or permanent archive."
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title={movieToEdit ? "Edit Movie" : "Add New Movie"}
+        description={
+          movieToEdit
+            ? "Update film details, personal rating, or watch status."
+            : "Record a film to your planned watchlist, active viewing, or permanent archive."
+        }
         size="md"
         footer={
           <div className="flex items-center justify-end gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setIsAddModalOpen(false)}
+              onClick={() => setIsModalOpen(false)}
             >
               Cancel
             </Button>
             <Button
               variant="primary"
               size="sm"
-              onClick={handleCreateMovieSubmit}
-              disabled={!newTitle.trim()}
+              onClick={handleFormSubmit}
+              disabled={!title.trim()}
               icon={<CheckCircle2 className="w-3.5 h-3.5" />}
             >
-              Save Movie
+              {movieToEdit ? "Save Changes" : "Save Movie"}
             </Button>
           </div>
         }
       >
-        <form onSubmit={handleCreateMovieSubmit} className="space-y-4">
+        <form onSubmit={handleFormSubmit} className="space-y-4">
           <Input
             label="Movie Title *"
-            value={newTitle}
-            onChange={setNewTitle}
+            value={title}
+            onChange={(val) => {
+              setTitle(val);
+              if (val.trim()) setFormError("");
+            }}
             placeholder="e.g. Blade Runner 2049"
+            error={formError}
             required
             autoFocus
           />
@@ -507,8 +645,8 @@ export const MoviesPage: React.FC = () => {
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Release Year"
-              value={newYear}
-              onChange={setNewYear}
+              value={releaseYear}
+              onChange={setReleaseYear}
               placeholder="e.g. 2017"
               type="number"
             />
@@ -517,9 +655,9 @@ export const MoviesPage: React.FC = () => {
                 Viewing Status
               </label>
               <select
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value as MovieStatus)}
-                className="w-full text-xs py-2 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as MovieStatus)}
+                className="w-full text-xs py-2 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
               >
                 <option value="planned">Planned (Watchlist)</option>
                 <option value="watching">Currently Watching</option>
@@ -528,31 +666,44 @@ export const MoviesPage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Personal Rating (/10)
-            </label>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
-                min="1"
-                max="10"
-                step="0.5"
-                value={newRating}
-                onChange={(e) => setNewRating(e.target.value)}
-                className="flex-1 accent-teal-500 cursor-pointer"
-              />
-              <span className="font-mono text-sm font-bold text-amber-400 w-10 text-right">
-                {parseFloat(newRating).toFixed(1)}
-              </span>
+          {/* Rating and Watched Date */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Personal Rating (/10)
+              </label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="10"
+                  step="0.5"
+                  value={rating}
+                  onChange={(e) => setRating(e.target.value)}
+                  className="flex-1 accent-teal-500 cursor-pointer"
+                />
+                <span className="font-mono text-sm font-bold text-amber-400 w-10 text-right">
+                  {parseFloat(rating).toFixed(1)}
+                </span>
+              </div>
             </div>
+
+            {status === "completed" && (
+              <Input
+                label="Completion / Watched Date"
+                value={dateWatched}
+                onChange={setDateWatched}
+                type="date"
+              />
+            )}
           </div>
 
+          {/* Genres Tagging */}
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Genres
+              Genre Selection
             </label>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1.5 mb-2">
               {[
                 "Sci-Fi",
                 "Action",
@@ -560,15 +711,16 @@ export const MoviesPage: React.FC = () => {
                 "Thriller",
                 "Crime",
                 "Comedy",
-                "Documentary",
+                "Adventure",
+                "Mystery",
                 "Animation",
               ].map((g) => {
-                const isSelected = newGenres.includes(g);
+                const isSelected = genres.includes(g);
                 return (
                   <button
                     type="button"
                     key={g}
-                    onClick={() => toggleGenreSelection(g)}
+                    onClick={() => toggleGenre(g)}
                     className={cn(
                       "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
                       isSelected
@@ -581,16 +733,51 @@ export const MoviesPage: React.FC = () => {
                 );
               })}
             </div>
+
+            {/* Custom Genre Input */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={customGenre}
+                onChange={(e) => setCustomGenre(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddCustomGenre();
+                  }
+                }}
+                placeholder="Add other genre..."
+                className="flex-1 text-xs py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddCustomGenre}
+              >
+                Add
+              </Button>
+            </div>
           </div>
 
+          {/* Optional Poster Image URL */}
+          <Input
+            label="Poster URL (Optional)"
+            value={posterUrl}
+            onChange={setPosterUrl}
+            placeholder="https://... or local path"
+            icon={ImageIcon}
+          />
+
+          {/* Notes */}
           <div>
             <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Personal Notes / Thoughts
+              Personal Notes / Review
             </label>
             <textarea
-              value={newNotes}
+              value={notes}
               onChange={(e) => setNewNotes(e.target.value)}
-              placeholder="Atmospheric cinematography, Hans Zimmer score..."
+              placeholder="Atmospheric cinematography, director highlights..."
               rows={2}
               className="w-full text-xs p-2.5 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500 resize-none"
             />
@@ -607,13 +794,36 @@ export const MoviesPage: React.FC = () => {
           description={`Released in ${selectedMovie.releaseYear || "Unknown"} • Status: ${selectedMovie.status}`}
           size="md"
           footer={
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setSelectedMovie(null)}
-            >
-              Close
-            </Button>
+            <div className="flex items-center justify-between w-full">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => {
+                  setMovieToDelete(selectedMovie);
+                }}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete
+              </Button>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleOpenEditModal(selectedMovie)}
+                  icon={<Edit2 className="w-3.5 h-3.5" />}
+                >
+                  Edit Movie
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedMovie(null)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
           }
         >
           <div className="space-y-4">
@@ -662,6 +872,51 @@ export const MoviesPage: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      {movieToDelete && (
+        <Modal
+          isOpen={true}
+          onClose={() => setMovieToDelete(null)}
+          title="Delete Movie"
+          size="sm"
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMovieToDelete(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleConfirmDelete}
+                icon={<Trash2 className="w-3.5 h-3.5" />}
+              >
+                Delete Movie
+              </Button>
+            </div>
+          }
+        >
+          <div className="flex items-start gap-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-300">
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="font-bold text-rose-200">Are you sure?</p>
+              <p className="mt-1 leading-relaxed">
+                Permanently delete{" "}
+                <span className="font-semibold text-white">
+                  "{movieToDelete.title}"
+                </span>{" "}
+                from your database?
+              </p>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
+
+export default MoviesPage;

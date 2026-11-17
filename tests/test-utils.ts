@@ -304,6 +304,16 @@ export class DOMNode {
   }
 
   querySelectorAll(selector: string): DOMNode[] {
+    if (selector.includes(",")) {
+      const parts = selector.split(",").map((s) => s.trim());
+      const set = new Set<DOMNode>();
+      for (const part of parts) {
+        for (const node of this.querySelectorAll(part)) {
+          set.add(node);
+        }
+      }
+      return Array.from(set);
+    }
     const results: DOMNode[] = [];
     const walk = (node: DOMNode) => {
       for (const child of node.children) {

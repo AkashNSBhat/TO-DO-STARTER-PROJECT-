@@ -12,6 +12,8 @@ import {
   TodayGoals,
   MovieDetail,
   MovieFilter,
+  CreateMovieInput,
+  UpdateMovieInput,
   SeriesDetail,
   SeriesFull,
   ArchiveItem,
@@ -417,6 +419,71 @@ export class DatabaseClient {
     return await invoke<MovieDetail[]>("get_movies", {
       filter: filter === "all" ? null : filter,
     });
+  }
+
+  static async createMovie(input: CreateMovieInput): Promise<MovieDetail> {
+    if (!this.isTauri()) {
+      const id = `mov-${Date.now()}`;
+      const newMovie: MovieDetail = {
+        id,
+        title: input.title,
+        releaseYear: input.releaseYear,
+        status: input.status || "planned",
+        rating: input.rating,
+        dateWatched: input.dateWatched,
+        isHistorical: input.isHistorical ?? false,
+        genres: input.genres || [],
+        posterColor: input.posterColor || "#8b5cf6",
+        posterUrl: input.posterUrl,
+        notes: input.notes,
+      };
+
+      this.localData.movies.unshift(newMovie);
+      return newMovie;
+    }
+
+    return await invoke<MovieDetail>("create_movie", { input });
+  }
+
+  static async updateMovie(input: UpdateMovieInput): Promise<boolean> {
+    if (!this.isTauri()) {
+      const movie = this.localData.movies.find((m: MovieDetail) => m.id === input.id);
+      if (movie) {
+        movie.title = input.title;
+        movie.releaseYear = input.releaseYear;
+        movie.status = input.status;
+        movie.rating = input.rating;
+        movie.dateWatched = input.dateWatched;
+        movie.genres = input.genres || movie.genres;
+        movie.notes = input.notes;
+        movie.posterUrl = input.posterUrl;
+        movie.posterColor = input.posterColor || movie.posterColor;
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_movie", { input });
+  }
+
+  static async deleteMovie(movieId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.movies = this.localData.movies.filter((m: MovieDetail) => m.id !== movieId);
+      return true;
+    }
+
+    return await invoke<boolean>("delete_movie", { movieId });
+  }
+
+  static async getAllGenres(): Promise<string[]> {
+    if (!this.isTauri()) {
+      const set = new Set<string>();
+      for (const m of this.localData.movies) {
+        for (const g of m.genres) set.add(g);
+      }
+      return Array.from(set).sort();
+    }
+
+    return await invoke<string[]>("get_all_genres");
   }
 
   // =============================================================

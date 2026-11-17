@@ -769,7 +769,8 @@ pub fn get_movies(
             r#"
             SELECT 
                 m.id, m.title, m.release_year, m.status, m.personal_rating, m.date_watched, m.is_historical,
-                (SELECT GROUP_CONCAT(g.name, ',') FROM movie_genres mg JOIN genres g ON mg.genre_id = g.id WHERE mg.movie_id = m.id) AS genres_csv
+                (SELECT GROUP_CONCAT(g.name, ',') FROM movie_genres mg JOIN genres g ON mg.genre_id = g.id WHERE mg.movie_id = m.id) AS genres_csv,
+                m.poster_url, m.notes
             FROM movies m
             WHERE 
                 CASE 
@@ -788,7 +789,12 @@ pub fn get_movies(
             let is_hist: i32 = row.get(6)?;
             let genres_csv: Option<String> = row.get(7)?;
             let genres = genres_csv
-                .map(|s| s.split(',').map(|g| g.trim().to_string()).collect())
+                .map(|s| {
+                    s.split(',')
+                        .map(|g| g.trim().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect()
+                })
                 .unwrap_or_default();
 
             Ok(MovieDetail {
@@ -801,6 +807,8 @@ pub fn get_movies(
                 is_historical: is_hist == 1,
                 genres,
                 poster_color: Some("#8b5cf6".to_string()),
+                poster_url: row.get(8)?,
+                notes: row.get(9)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -808,6 +816,192 @@ pub fn get_movies(
         .collect();
 
     Ok(movies)
+}
+
+#[tauri::command]
+pub fn create_movie(
+    state: State<'_, AppState>,
+    input: CreateMovieInput,
+) -> Result<MovieDetail, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let movie_id = format!("mov-{}", uuid::Uuid::new_v4());
+    let status = input.status.unwrap_or_else(|| "planned".to_string());
+    let is_hist = if input.is_historical.unwrap_or(false) { 1 } else { 0 };
+
+    conn.execute(
+        r#"
+        INSERT INTO movies (id, title, release_year, status, personal_rating, date_watched, notes, poster_url, is_historical, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, datetime('now'), datetime('now'))
+        "#,
+        rusqlite::params![
+            movie_id,
+            input.title,
+            input.release_year,
+            status,
+            input.rating,
+            input.date_watched,
+            input.notes,
+            input.poster_url,
+            is_hist,
+        ],
+    )
+    .map_err(|e| format!("Failed to insert movie: {}", e))?;
+
+    // Handle genres junction
+    let genres_list = input.genres.unwrap_or_default();
+    for genre_name in &genres_list {
+        let trimmed = genre_name.trim();
+        if !trimmed.is_empty() {
+            let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                rusqlite::params![genre_id, trimmed],
+            );
+            let actual_genre_id: String = conn
+                .query_row(
+                    "SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE",
+                    [trimmed],
+                    |r| r.get(0),
+                )
+                .unwrap_or(genre_id);
+
+            let _ = conn.execute(
+                "INSERT OR IGNORE INTO movie_genres (movie_id, genre_id) VALUES (?1, ?2)",
+                rusqlite::params![movie_id, actual_genre_id],
+            );
+        }
+    }
+
+    if status == "completed" {
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'movie_completed', 'movie', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, movie_id, input.title],
+        );
+    }
+
+    Ok(MovieDetail {
+        id: movie_id,
+        title: input.title,
+        release_year: input.release_year,
+        status,
+        rating: input.rating,
+        date_watched: input.date_watched,
+        is_historical: is_hist == 1,
+        genres: genres_list,
+        poster_color: input.poster_color.or_else(|| Some("#8b5cf6".to_string())),
+        poster_url: input.poster_url,
+        notes: input.notes,
+    })
+}
+
+#[tauri::command]
+pub fn update_movie(
+    state: State<'_, AppState>,
+    input: UpdateMovieInput,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute(
+        r#"
+        UPDATE movies
+        SET title = ?1, release_year = ?2, status = ?3, personal_rating = ?4, date_watched = ?5, notes = ?6, poster_url = ?7, updated_at = datetime('now')
+        WHERE id = ?8
+        "#,
+        rusqlite::params![
+            input.title,
+            input.release_year,
+            input.status,
+            input.rating,
+            input.date_watched,
+            input.notes,
+            input.poster_url,
+            input.id,
+        ],
+    )
+    .map_err(|e| format!("Failed to update movie: {}", e))?;
+
+    // Update genres junction: delete old, insert new
+    let _ = conn.execute("DELETE FROM movie_genres WHERE movie_id = ?1", [&input.id]);
+
+    if let Some(genres) = input.genres {
+        for genre_name in genres {
+            let trimmed = genre_name.trim();
+            if !trimmed.is_empty() {
+                let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                    rusqlite::params![genre_id, trimmed],
+                );
+                let actual_genre_id: String = conn
+                    .query_row(
+                        "SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE",
+                        [trimmed],
+                        |r| r.get(0),
+                    )
+                    .unwrap_or(genre_id);
+
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO movie_genres (movie_id, genre_id) VALUES (?1, ?2)",
+                    rusqlite::params![input.id, actual_genre_id],
+                );
+            }
+        }
+    }
+
+    if input.status == "completed" {
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'movie_completed', 'movie', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, input.id, input.title],
+        );
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn delete_movie(
+    state: State<'_, AppState>,
+    movie_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let _ = conn.execute("DELETE FROM movie_genres WHERE movie_id = ?1", [&movie_id]);
+    conn.execute("DELETE FROM movies WHERE id = ?1", [&movie_id])
+        .map_err(|e| format!("Failed to delete movie: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn get_all_genres(state: State<'_, AppState>) -> Result<Vec<String>, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let mut stmt = conn
+        .prepare("SELECT name FROM genres ORDER BY name ASC")
+        .map_err(|e| e.to_string())?;
+
+    let genres = stmt
+        .query_map([], |r| r.get(0))
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .collect();
+
+    Ok(genres)
 }
 
 // =============================================================

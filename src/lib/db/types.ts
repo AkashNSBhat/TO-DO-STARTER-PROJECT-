@@ -168,6 +168,33 @@ export interface MovieDetail {
   isHistorical: boolean;
   genres: string[];
   posterColor?: string;
+  posterUrl?: string;
+  notes?: string;
+}
+
+export interface CreateMovieInput {
+  title: string;
+  releaseYear?: number;
+  status?: MovieStatus;
+  rating?: number;
+  dateWatched?: string;
+  isHistorical?: boolean;
+  genres?: string[];
+  posterColor?: string;
+  posterUrl?: string;
+  notes?: string;
+}
+
+export interface UpdateMovieInput {
+  id: string;
+  title: string;
+  releaseYear?: number;
+  status: MovieStatus;
+  rating?: number;
+  dateWatched?: string;
+  genres?: string[];
+  posterColor?: string;
+  posterUrl?: string;
   notes?: string;
 }
 

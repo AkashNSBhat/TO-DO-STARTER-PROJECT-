@@ -281,6 +281,38 @@ pub struct MovieDetail {
     pub is_historical: bool,
     pub genres: Vec<String>,
     pub poster_color: Option<String>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateMovieInput {
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub status: Option<String>,
+    pub rating: Option<f64>,
+    pub date_watched: Option<String>,
+    pub is_historical: Option<bool>,
+    pub genres: Option<Vec<String>>,
+    pub poster_color: Option<String>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateMovieInput {
+    pub id: String,
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub status: String,
+    pub rating: Option<f64>,
+    pub date_watched: Option<String>,
+    pub genres: Option<Vec<String>>,
+    pub poster_color: Option<String>,
+    pub poster_url: Option<String>,
+    pub notes: Option<String>,
 }
 
 // =============================================================

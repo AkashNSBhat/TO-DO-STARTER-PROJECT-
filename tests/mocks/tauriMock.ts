@@ -820,6 +820,59 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
       return JSON.parse(JSON.stringify(list));
     }
 
+    case "create_movie": {
+      const input = args.input;
+      const movie: MovieDetail = {
+        id: `mov-${Date.now()}`,
+        title: input.title,
+        releaseYear: input.releaseYear,
+        status: input.status || "planned",
+        rating: input.rating,
+        dateWatched: input.dateWatched,
+        isHistorical: input.isHistorical ?? false,
+        genres: input.genres || [],
+        posterColor: input.posterColor || "#8b5cf6",
+        posterUrl: input.posterUrl,
+        notes: input.notes,
+      };
+      activeMovies.unshift(movie);
+      return JSON.parse(JSON.stringify(movie));
+    }
+
+    case "update_movie": {
+      const input = args.input;
+      const movie = activeMovies.find((m) => m.id === input.id);
+      if (movie) {
+        movie.title = input.title;
+        movie.releaseYear = input.releaseYear;
+        movie.status = input.status;
+        movie.rating = input.rating;
+        movie.dateWatched = input.dateWatched;
+        if (input.genres) movie.genres = input.genres;
+        movie.notes = input.notes;
+        movie.posterUrl = input.posterUrl;
+        if (input.posterColor) movie.posterColor = input.posterColor;
+      }
+      return true;
+    }
+
+    case "delete_movie": {
+      const movieId = args.movieId ?? args.movie_id;
+      const idx = activeMovies.findIndex((m) => m.id === movieId);
+      if (idx !== -1) {
+        activeMovies.splice(idx, 1);
+      }
+      return true;
+    }
+
+    case "get_all_genres": {
+      const set = new Set<string>();
+      for (const m of activeMovies) {
+        for (const g of m.genres) set.add(g);
+      }
+      return Array.from(set).sort();
+    }
+
     case "get_series": {
       return JSON.parse(JSON.stringify(activeSeries));
     }
