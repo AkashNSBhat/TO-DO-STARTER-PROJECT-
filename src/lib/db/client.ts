@@ -27,6 +27,8 @@ import {
   UpdateArchivedInput,
   PlanItem,
   PlanPeriod,
+  CreatePlanItemInput,
+  UpdatePlanItemInput,
   ActivityHistoryItem,
   StatisticsData,
   AppSettings,
@@ -942,6 +944,184 @@ export class DatabaseClient {
       return true;
     }
     return await invoke<boolean>("toggle_plan_item_completion", { itemId, isCompleted });
+  }
+
+  static async createPlanItem(input: CreatePlanItemInput): Promise<PlanItem> {
+    if (!this.isTauri()) {
+      const id = `plan-${Date.now()}`;
+      const itemsInPeriod = this.localData.planItems.filter(
+        (p: PlanItem) => p.periodType === input.periodType && p.periodIdentifier === input.periodIdentifier
+      );
+      const maxPriority = itemsInPeriod.reduce((max: number, p: PlanItem) => Math.max(max, p.priorityOrder), 0);
+      const priorityOrder = input.priorityOrder ?? maxPriority + 1;
+
+      // Check if linked entity is completed
+      let isCompleted = false;
+      let completedAt: string | undefined = undefined;
+
+      if (input.linkedTaskId) {
+        const t = this.localData.tasks.find((task: TaskDetail) => task.id === input.linkedTaskId);
+        if (t && t.isCompleted) {
+          isCompleted = true;
+          completedAt = new Date().toISOString();
+        }
+      } else if (input.linkedMovieId) {
+        const m = this.localData.movies.find((mov: MovieDetail) => mov.id === input.linkedMovieId);
+        if (m && m.status === "completed") {
+          isCompleted = true;
+          completedAt = new Date().toISOString();
+        }
+      } else if (input.linkedSeriesId) {
+        const s = this.localData.seriesSummary.find((ser: SeriesDetail) => ser.id === input.linkedSeriesId);
+        if (s && s.status === "completed") {
+          isCompleted = true;
+          completedAt = new Date().toISOString();
+        }
+      }
+
+      const newItem: PlanItem = {
+        id,
+        periodType: input.periodType,
+        periodIdentifier: input.periodIdentifier,
+        category: input.category,
+        customCategoryName: input.customCategoryName,
+        title: input.title,
+        description: input.description,
+        priorityOrder,
+        isCompleted,
+        completedAt,
+        linkedTaskId: input.linkedTaskId,
+        linkedMovieId: input.linkedMovieId,
+        linkedSeriesId: input.linkedSeriesId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      this.localData.planItems.push(newItem);
+      return newItem;
+    }
+
+    return await invoke<PlanItem>("create_plan_item", { input });
+  }
+
+  static async updatePlanItem(input: UpdatePlanItemInput): Promise<boolean> {
+    if (!this.isTauri()) {
+      const item = this.localData.planItems.find((p: PlanItem) => p.id === input.id);
+      if (item) {
+        item.category = input.category;
+        item.customCategoryName = input.customCategoryName;
+        item.title = input.title;
+        item.description = input.description;
+        if (input.priorityOrder !== undefined) {
+          item.priorityOrder = input.priorityOrder;
+        }
+        item.linkedTaskId = input.linkedTaskId;
+        item.linkedMovieId = input.linkedMovieId;
+        item.linkedSeriesId = input.linkedSeriesId;
+        item.updatedAt = new Date().toISOString();
+
+        if (input.linkedTaskId) {
+          const t = this.localData.tasks.find((task: TaskDetail) => task.id === input.linkedTaskId);
+          if (t && t.isCompleted && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = new Date().toISOString();
+          }
+        } else if (input.linkedMovieId) {
+          const m = this.localData.movies.find((mov: MovieDetail) => mov.id === input.linkedMovieId);
+          if (m && m.status === "completed" && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = new Date().toISOString();
+          }
+        } else if (input.linkedSeriesId) {
+          const s = this.localData.seriesSummary.find((ser: SeriesDetail) => ser.id === input.linkedSeriesId);
+          if (s && s.status === "completed" && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = new Date().toISOString();
+          }
+        }
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_plan_item", { input });
+  }
+
+  static async deletePlanItem(itemId: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.planItems = this.localData.planItems.filter((p: PlanItem) => p.id !== itemId);
+      return true;
+    }
+
+    return await invoke<boolean>("delete_plan_item", { itemId });
+  }
+
+  static async reorderPlanItems(itemIds: string[]): Promise<boolean> {
+    if (!this.isTauri()) {
+      itemIds.forEach((id, index) => {
+        const item = this.localData.planItems.find((p: PlanItem) => p.id === id);
+        if (item) {
+          item.priorityOrder = index + 1;
+        }
+      });
+      return true;
+    }
+
+    return await invoke<boolean>("reorder_plan_items", { itemIds });
+  }
+
+  static async carryForwardPlanItems(
+    fromPeriodType: PlanPeriod,
+    fromPeriodId: string,
+    toPeriodId: string
+  ): Promise<number> {
+    if (!this.isTauri()) {
+      const unfinished = this.localData.planItems.filter(
+        (p: PlanItem) => p.periodType === fromPeriodType && p.periodIdentifier === fromPeriodId && !p.isCompleted
+      );
+
+      let count = 0;
+      for (const item of unfinished) {
+        const exists = this.localData.planItems.some(
+          (p: PlanItem) =>
+            p.periodType === fromPeriodType &&
+            p.periodIdentifier === toPeriodId &&
+            p.title.toLowerCase() === item.title.toLowerCase()
+        );
+
+        if (!exists) {
+          const itemsInTarget = this.localData.planItems.filter(
+            (p: PlanItem) => p.periodType === fromPeriodType && p.periodIdentifier === toPeriodId
+          );
+          const maxP = itemsInTarget.reduce((max: number, p: PlanItem) => Math.max(max, p.priorityOrder), 0);
+
+          const rolled: PlanItem = {
+            id: `plan-${Date.now()}-${count}`,
+            periodType: fromPeriodType,
+            periodIdentifier: toPeriodId,
+            category: item.category,
+            customCategoryName: item.customCategoryName,
+            title: item.title,
+            description: item.description,
+            priorityOrder: maxP + 1,
+            isCompleted: false,
+            linkedTaskId: item.linkedTaskId,
+            linkedMovieId: item.linkedMovieId,
+            linkedSeriesId: item.linkedSeriesId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          this.localData.planItems.push(rolled);
+          count++;
+        }
+      }
+      return count;
+    }
+
+    return await invoke<number>("carry_forward_plan_items", {
+      fromPeriodType,
+      fromPeriodId,
+      toPeriodId,
+    });
   }
 
   // =============================================================

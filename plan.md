@@ -123,27 +123,27 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 6 — PLAN Module
-- [ ] **6.1 Monthly planning**: Monthly goal setting and milestone tracking.
-- [ ] **6.2 Weekly planning**: Week-by-week tactical plans.
-- [ ] **6.3 Yearly planning**: Long-term macro goals for the year.
-- [ ] **6.4 Navigate between planning periods**: Next/previous cycle navigation and calendar jumpers.
-- [ ] **6.5 Entertainment category**: Queue movies and series intended for the cycle.
-- [ ] **6.6 Learning category**: Books, courses, skills, and certifications.
-- [ ] **6.7 Personal Goals category**: Health, fitness, habits, and mindset.
-- [ ] **6.8 Projects category**: Side projects, work initiatives, and home tasks.
-- [ ] **6.9 Custom categories**: User-defined plan categories with custom color tags.
-- [ ] **6.10 Add plan items**: Modal for adding plan objectives with targets.
-- [ ] **6.11 Priority numbering**: Explicit 1..N order of importance.
-- [ ] **6.12 Drag-and-drop priority reordering**: Smooth visual reordering.
-- [ ] **6.13 Edit and delete plan items**: Full editing controls.
-- [ ] **6.14 Link plan items with daily tasks**: Connect daily tasks to high-level plan goals.
-- [ ] **6.15 Link movies and series with plans**: Connect entertainment targets directly to tracker items.
-- [ ] **6.16 Automatic completion synchronization**: Complete linked task/movie/series -> auto-marks plan item.
-- [ ] **6.17 Completed items remain visible and greyed out**: Finished items stay in place with checked, muted style.
-- [ ] **6.18 Plan progress calculations**: Completion rate percentage per category and overall.
-- [ ] **6.19 Historical plans**: Browse completed past cycles (previous months/years).
-- [ ] **6.20 Carry unfinished items forward manually**: One-click rollover to the next period.
-- [ ] **6.21 Plan statistics and testing**: Verification of planning cycles in SQLite.
+- [x] **6.1 Monthly planning**: Monthly goal setting and milestone tracking.
+- [x] **6.2 Weekly planning**: Week-by-week tactical plans.
+- [x] **6.3 Yearly planning**: Long-term macro goals for the year.
+- [x] **6.4 Navigate between planning periods**: Next/previous cycle navigation and calendar jumpers.
+- [x] **6.5 Entertainment category**: Queue movies and series intended for the cycle.
+- [x] **6.6 Learning category**: Books, courses, skills, and certifications.
+- [x] **6.7 Personal Goals category**: Health, fitness, habits, and mindset.
+- [x] **6.8 Projects category**: Side projects, work initiatives, and home tasks.
+- [x] **6.9 Custom categories**: User-defined plan categories with custom color tags.
+- [x] **6.10 Add plan items**: Modal for adding plan objectives with targets.
+- [x] **6.11 Priority numbering**: Explicit 1..N order of importance.
+- [x] **6.12 Drag-and-drop priority reordering**: Smooth visual reordering.
+- [x] **6.13 Edit and delete plan items**: Full editing controls.
+- [x] **6.14 Link plan items with daily tasks**: Connect daily tasks to high-level plan goals.
+- [x] **6.15 Link movies and series with plans**: Connect entertainment targets directly to tracker items.
+- [x] **6.16 Automatic completion synchronization**: Complete linked task/movie/series -> auto-marks plan item.
+- [x] **6.17 Completed items remain visible and greyed out**: Finished items stay in place with checked, muted style.
+- [x] **6.18 Plan progress calculations**: Completion rate percentage per category and overall.
+- [x] **6.19 Historical plans**: Browse completed past cycles (previous months/years).
+- [x] **6.20 Carry unfinished items forward manually**: One-click rollover to the next period.
+- [x] **6.21 Plan statistics and testing**: Verification of planning cycles in SQLite.
 
 ---
 

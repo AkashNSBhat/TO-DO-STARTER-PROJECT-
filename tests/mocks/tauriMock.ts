@@ -702,6 +702,12 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
         task.completedAt = isCompleted ? "2026-11-16 12:00:00" : undefined;
         if (isCompleted) {
           task.completedSubtasksCount = task.subtasksCount;
+          activePlanItems.forEach((p) => {
+            if (p.linkedTaskId === taskId) {
+              p.isCompleted = true;
+              p.completedAt = "2026-11-16 12:00:00";
+            }
+          });
         }
       }
       return true;
@@ -853,6 +859,14 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
         movie.posterUrl = input.posterUrl;
         if (input.posterColor) movie.posterColor = input.posterColor;
       }
+      if (input.status === "completed") {
+        activePlanItems.forEach((p) => {
+          if (p.linkedMovieId === input.id) {
+            p.isCompleted = true;
+            p.completedAt = "2026-11-16 12:00:00";
+          }
+        });
+      }
       return true;
     }
 
@@ -929,6 +943,12 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
             const seriesCompleted = full.totalEpisodes > 0 && completed === full.totalEpisodes;
             if (seriesCompleted) {
               full.status = "completed";
+              activePlanItems.forEach((p) => {
+                if (p.linkedSeriesId === full.id) {
+                  p.isCompleted = true;
+                  p.completedAt = "2026-11-16 12:00:00";
+                }
+              });
             } else if (!isCompleted && full.status === "completed") {
               full.status = "watching";
             }
@@ -1037,6 +1057,14 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
         full.notes = input.notes;
         full.posterUrl = input.posterUrl;
         if (input.genres) full.genres = input.genres;
+      }
+      if (input.status === "completed") {
+        activePlanItems.forEach((p) => {
+          if (p.linkedSeriesId === input.id) {
+            p.isCompleted = true;
+            p.completedAt = "2026-11-16 12:00:00";
+          }
+        });
       }
       return true;
     }
@@ -1311,6 +1339,164 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
         item.completedAt = isCompleted ? "2026-11-16 12:00:00" : undefined;
       }
       return true;
+    }
+
+    case "create_plan_item": {
+      const input = args.input;
+      const id = `plan-${Date.now()}`;
+      const periodItems = activePlanItems.filter(
+        (p) => p.periodType === input.periodType && p.periodIdentifier === input.periodIdentifier
+      );
+      const maxP = periodItems.reduce((max, p) => Math.max(max, p.priorityOrder), 0);
+      const priorityOrder = input.priorityOrder ?? maxP + 1;
+
+      let isCompleted = false;
+      let completedAt: string | undefined = undefined;
+
+      if (input.linkedTaskId) {
+        const t = activeTasks.find((task) => task.id === input.linkedTaskId);
+        if (t?.isCompleted) {
+          isCompleted = true;
+          completedAt = "2026-11-16 12:00:00";
+        }
+      } else if (input.linkedMovieId) {
+        const m = activeMovies.find((mov) => mov.id === input.linkedMovieId);
+        if (m?.status === "completed") {
+          isCompleted = true;
+          completedAt = "2026-11-16 12:00:00";
+        }
+      } else if (input.linkedSeriesId) {
+        const s = activeSeries.find((ser) => ser.id === input.linkedSeriesId);
+        if (s?.status === "completed") {
+          isCompleted = true;
+          completedAt = "2026-11-16 12:00:00";
+        }
+      }
+
+      const newItem: PlanItem = {
+        id,
+        periodType: input.periodType,
+        periodIdentifier: input.periodIdentifier,
+        category: input.category,
+        customCategoryName: input.customCategoryName,
+        title: input.title,
+        description: input.description,
+        priorityOrder,
+        isCompleted,
+        completedAt,
+        linkedTaskId: input.linkedTaskId,
+        linkedMovieId: input.linkedMovieId,
+        linkedSeriesId: input.linkedSeriesId,
+        createdAt: "2026-11-16 10:00:00",
+        updatedAt: "2026-11-16 10:00:00",
+      };
+      activePlanItems.push(newItem);
+      return JSON.parse(JSON.stringify(newItem));
+    }
+
+    case "update_plan_item": {
+      const input = args.input;
+      const item = activePlanItems.find((p) => p.id === input.id);
+      if (item) {
+        item.category = input.category;
+        item.customCategoryName = input.customCategoryName;
+        item.title = input.title;
+        item.description = input.description;
+        if (input.priorityOrder !== undefined) {
+          item.priorityOrder = input.priorityOrder;
+        }
+        item.linkedTaskId = input.linkedTaskId;
+        item.linkedMovieId = input.linkedMovieId;
+        item.linkedSeriesId = input.linkedSeriesId;
+
+        if (input.linkedTaskId) {
+          const t = activeTasks.find((task) => task.id === input.linkedTaskId);
+          if (t?.isCompleted && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = "2026-11-16 12:00:00";
+          }
+        } else if (input.linkedMovieId) {
+          const m = activeMovies.find((mov) => mov.id === input.linkedMovieId);
+          if (m?.status === "completed" && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = "2026-11-16 12:00:00";
+          }
+        } else if (input.linkedSeriesId) {
+          const s = activeSeries.find((ser) => ser.id === input.linkedSeriesId);
+          if (s?.status === "completed" && !item.isCompleted) {
+            item.isCompleted = true;
+            item.completedAt = "2026-11-16 12:00:00";
+          }
+        }
+      }
+      return true;
+    }
+
+    case "delete_plan_item": {
+      const itemId = args.itemId ?? args.item_id;
+      const idx = activePlanItems.findIndex((p) => p.id === itemId);
+      if (idx !== -1) {
+        activePlanItems.splice(idx, 1);
+      }
+      return true;
+    }
+
+    case "reorder_plan_items": {
+      const itemIds: string[] = args.itemIds ?? args.item_ids ?? [];
+      itemIds.forEach((id, index) => {
+        const it = activePlanItems.find((p) => p.id === id);
+        if (it) {
+          it.priorityOrder = index + 1;
+        }
+      });
+      return true;
+    }
+
+    case "carry_forward_plan_items": {
+      const fromPeriodType = args.fromPeriodType ?? args.from_period_type;
+      const fromPeriodId = args.fromPeriodId ?? args.from_period_id;
+      const toPeriodId = args.toPeriodId ?? args.to_period_id;
+
+      const unfinished = activePlanItems.filter(
+        (p) => p.periodType === fromPeriodType && p.periodIdentifier === fromPeriodId && !p.isCompleted
+      );
+
+      let count = 0;
+      for (const item of unfinished) {
+        const exists = activePlanItems.some(
+          (p) =>
+            p.periodType === fromPeriodType &&
+            p.periodIdentifier === toPeriodId &&
+            p.title.toLowerCase() === item.title.toLowerCase()
+        );
+
+        if (!exists) {
+          const inTarget = activePlanItems.filter(
+            (p) => p.periodType === fromPeriodType && p.periodIdentifier === toPeriodId
+          );
+          const maxP = inTarget.reduce((max, p) => Math.max(max, p.priorityOrder), 0);
+
+          const rolled: PlanItem = {
+            id: `plan-${Date.now()}-${count}`,
+            periodType: fromPeriodType,
+            periodIdentifier: toPeriodId,
+            category: item.category,
+            customCategoryName: item.customCategoryName,
+            title: item.title,
+            description: item.description,
+            priorityOrder: maxP + 1,
+            isCompleted: false,
+            linkedTaskId: item.linkedTaskId,
+            linkedMovieId: item.linkedMovieId,
+            linkedSeriesId: item.linkedSeriesId,
+            createdAt: "2026-11-16 10:00:00",
+            updatedAt: "2026-11-16 10:00:00",
+          };
+          activePlanItems.push(rolled);
+          count++;
+        }
+      }
+      return count;
     }
 
     // -------------------------------------------------------------

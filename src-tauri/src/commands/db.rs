@@ -406,6 +406,12 @@ pub fn toggle_task_completion(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'task_completed', 'task', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, task_id, task_title],
         );
+
+        // Auto-complete any linked plan items
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1, updated_at = datetime('now') WHERE linked_task_id = ?2 AND is_completed = 0",
+            rusqlite::params![completed_at, task_id],
+        );
     }
 
     Ok(true)
@@ -882,6 +888,13 @@ pub fn create_movie(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'movie_completed', 'movie', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, movie_id, input.title],
         );
+
+        // Auto-complete any linked plan items
+        let now = Utc::now().to_rfc3339();
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1, updated_at = datetime('now') WHERE linked_movie_id = ?2 AND is_completed = 0",
+            rusqlite::params![now, movie_id],
+        );
     }
 
     Ok(MovieDetail {
@@ -961,6 +974,13 @@ pub fn update_movie(
         let _ = conn.execute(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'movie_completed', 'movie', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, input.id, input.title],
+        );
+
+        // Auto-complete any linked plan items
+        let now = Utc::now().to_rfc3339();
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1, updated_at = datetime('now') WHERE linked_movie_id = ?2 AND is_completed = 0",
+            rusqlite::params![now, input.id],
         );
     }
 
@@ -1379,6 +1399,13 @@ pub fn update_series(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'series_completed', 'series', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, input.id, input.title],
         );
+
+        // Auto-complete any linked plan items
+        let now = Utc::now().to_rfc3339();
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1, updated_at = datetime('now') WHERE linked_series_id = ?2 AND is_completed = 0",
+            rusqlite::params![now, input.id],
+        );
     }
 
     Ok(true)
@@ -1493,6 +1520,13 @@ pub fn toggle_episode_completion(
         let _ = conn.execute(
             "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'series_completed', 'series', ?2, ?3, datetime('now'))",
             rusqlite::params![act_id, series_id, series_title],
+        );
+
+        // Auto-complete any linked plan items
+        let now = Utc::now().to_rfc3339();
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1, updated_at = datetime('now') WHERE linked_series_id = ?2 AND is_completed = 0",
+            rusqlite::params![now, series_id],
         );
 
         series_completed = true;
@@ -2180,6 +2214,331 @@ pub fn toggle_plan_item_completion(
     }
 
     Ok(true)
+}
+
+#[tauri::command]
+pub fn create_plan_item(
+    state: State<'_, AppState>,
+    input: CreatePlanItemInput,
+) -> Result<PlanItem, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let plan_id = format!("plan-{}", uuid::Uuid::new_v4());
+    let priority = match input.priority_order {
+        Some(p) => p,
+        None => {
+            let max_p: i32 = conn
+                .query_row(
+                    "SELECT COALESCE(MAX(priority_order), 0) FROM plan_items WHERE period_type = ?1 AND period_identifier = ?2",
+                    rusqlite::params![input.period_type, input.period_identifier],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+            max_p + 1
+        }
+    };
+
+    // Check if linked entity is already completed
+    let mut is_completed = false;
+    let mut completed_at: Option<String> = None;
+
+    if let Some(ref tid) = input.linked_task_id {
+        let task_comp: i32 = conn
+            .query_row("SELECT is_completed FROM tasks WHERE id = ?1", [tid], |r| r.get(0))
+            .unwrap_or(0);
+        if task_comp == 1 {
+            is_completed = true;
+            completed_at = Some(Utc::now().to_rfc3339());
+        }
+    } else if let Some(ref mid) = input.linked_movie_id {
+        let movie_status: String = conn
+            .query_row("SELECT status FROM movies WHERE id = ?1", [mid], |r| r.get(0))
+            .unwrap_or_default();
+        if movie_status == "completed" {
+            is_completed = true;
+            completed_at = Some(Utc::now().to_rfc3339());
+        }
+    } else if let Some(ref sid) = input.linked_series_id {
+        let series_status: String = conn
+            .query_row("SELECT status FROM series WHERE id = ?1", [sid], |r| r.get(0))
+            .unwrap_or_default();
+        if series_status == "completed" {
+            is_completed = true;
+            completed_at = Some(Utc::now().to_rfc3339());
+        }
+    }
+
+    let comp_flag = if is_completed { 1 } else { 0 };
+    let now = Utc::now().to_rfc3339();
+
+    conn.execute(
+        r#"
+        INSERT INTO plan_items (
+            id, period_type, period_identifier, category, custom_category_name,
+            title, description, priority_order, is_completed, completed_at,
+            linked_task_id, linked_movie_id, linked_series_id, created_at, updated_at
+        ) VALUES (
+            ?1, ?2, ?3, ?4, ?5,
+            ?6, ?7, ?8, ?9, ?10,
+            ?11, ?12, ?13, ?14, ?14
+        )
+        "#,
+        rusqlite::params![
+            plan_id,
+            input.period_type,
+            input.period_identifier,
+            input.category,
+            input.custom_category_name,
+            input.title,
+            input.description,
+            priority,
+            comp_flag,
+            completed_at,
+            input.linked_task_id,
+            input.linked_movie_id,
+            input.linked_series_id,
+            now,
+        ],
+    )
+    .map_err(|e| format!("Failed to create plan item: {}", e))?;
+
+    Ok(PlanItem {
+        id: plan_id,
+        period_type: input.period_type,
+        period_identifier: input.period_identifier,
+        category: input.category,
+        custom_category_name: input.custom_category_name,
+        title: input.title,
+        description: input.description,
+        priority_order: priority,
+        is_completed,
+        completed_at,
+        linked_task_id: input.linked_task_id,
+        linked_movie_id: input.linked_movie_id,
+        linked_series_id: input.linked_series_id,
+        created_at: now.clone(),
+        updated_at: now,
+    })
+}
+
+#[tauri::command]
+pub fn update_plan_item(
+    state: State<'_, AppState>,
+    input: UpdatePlanItemInput,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let priority = input.priority_order.unwrap_or(1);
+
+    conn.execute(
+        r#"
+        UPDATE plan_items
+        SET category = ?1, custom_category_name = ?2, title = ?3, description = ?4,
+            priority_order = ?5, linked_task_id = ?6, linked_movie_id = ?7, linked_series_id = ?8,
+            updated_at = datetime('now')
+        WHERE id = ?9
+        "#,
+        rusqlite::params![
+            input.category,
+            input.custom_category_name,
+            input.title,
+            input.description,
+            priority,
+            input.linked_task_id,
+            input.linked_movie_id,
+            input.linked_series_id,
+            input.id,
+        ],
+    )
+    .map_err(|e| format!("Failed to update plan item: {}", e))?;
+
+    // Check if new link is already completed
+    let mut should_complete = false;
+    if let Some(ref tid) = input.linked_task_id {
+        let task_comp: i32 = conn
+            .query_row("SELECT is_completed FROM tasks WHERE id = ?1", [tid], |r| r.get(0))
+            .unwrap_or(0);
+        if task_comp == 1 {
+            should_complete = true;
+        }
+    } else if let Some(ref mid) = input.linked_movie_id {
+        let movie_status: String = conn
+            .query_row("SELECT status FROM movies WHERE id = ?1", [mid], |r| r.get(0))
+            .unwrap_or_default();
+        if movie_status == "completed" {
+            should_complete = true;
+        }
+    } else if let Some(ref sid) = input.linked_series_id {
+        let series_status: String = conn
+            .query_row("SELECT status FROM series WHERE id = ?1", [sid], |r| r.get(0))
+            .unwrap_or_default();
+        if series_status == "completed" {
+            should_complete = true;
+        }
+    }
+
+    if should_complete {
+        let now = Utc::now().to_rfc3339();
+        let _ = conn.execute(
+            "UPDATE plan_items SET is_completed = 1, completed_at = ?1 WHERE id = ?2 AND is_completed = 0",
+            rusqlite::params![now, input.id],
+        );
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn delete_plan_item(
+    state: State<'_, AppState>,
+    item_id: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    conn.execute("DELETE FROM plan_items WHERE id = ?1", [&item_id])
+        .map_err(|e| format!("Failed to delete plan item: {}", e))?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn reorder_plan_items(
+    state: State<'_, AppState>,
+    item_ids: Vec<String>,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    for (index, id) in item_ids.iter().enumerate() {
+        let order = (index + 1) as i32;
+        conn.execute(
+            "UPDATE plan_items SET priority_order = ?1, updated_at = datetime('now') WHERE id = ?2",
+            rusqlite::params![order, id],
+        )
+        .map_err(|e| format!("Failed to reorder item: {}", e))?;
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn carry_forward_plan_items(
+    state: State<'_, AppState>,
+    from_period_type: String,
+    from_period_id: String,
+    to_period_id: String,
+) -> Result<i64, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let mut stmt = conn
+        .prepare(
+            r#"
+            SELECT category, custom_category_name, title, description, priority_order,
+                   linked_task_id, linked_movie_id, linked_series_id
+            FROM plan_items
+            WHERE period_type = ?1 AND period_identifier = ?2 AND is_completed = 0
+            ORDER BY priority_order ASC
+            "#,
+        )
+        .map_err(|e| e.to_string())?;
+
+    struct UnfinishedPlan {
+        category: String,
+        custom_category_name: Option<String>,
+        title: String,
+        description: Option<String>,
+        _priority_order: i32,
+        linked_task_id: Option<String>,
+        linked_movie_id: Option<String>,
+        linked_series_id: Option<String>,
+    }
+
+    let unfinished: Vec<UnfinishedPlan> = stmt
+        .query_map(rusqlite::params![from_period_type, from_period_id], |r| {
+            Ok(UnfinishedPlan {
+                category: r.get(0)?,
+                custom_category_name: r.get(1)?,
+                title: r.get(2)?,
+                description: r.get(3)?,
+                _priority_order: r.get(4)?,
+                linked_task_id: r.get(5)?,
+                linked_movie_id: r.get(6)?,
+                linked_series_id: r.get(7)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(Result::ok)
+        .collect();
+
+    let mut carried_count = 0i64;
+
+    for item in unfinished {
+        // Prevent duplicate copy if an item with the same title already exists in the target period
+        let exists: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM plan_items WHERE period_type = ?1 AND period_identifier = ?2 AND LOWER(title) = LOWER(?3)",
+                rusqlite::params![from_period_type, to_period_id, item.title],
+                |r| r.get(0),
+            )
+            .unwrap_or(0);
+
+        if exists == 0 {
+            let new_id = format!("plan-{}", uuid::Uuid::new_v4());
+            let max_p: i32 = conn
+                .query_row(
+                    "SELECT COALESCE(MAX(priority_order), 0) FROM plan_items WHERE period_type = ?1 AND period_identifier = ?2",
+                    rusqlite::params![from_period_type, to_period_id],
+                    |r| r.get(0),
+                )
+                .unwrap_or(0);
+
+            conn.execute(
+                r#"
+                INSERT INTO plan_items (
+                    id, period_type, period_identifier, category, custom_category_name,
+                    title, description, priority_order, is_completed,
+                    linked_task_id, linked_movie_id, linked_series_id, created_at, updated_at
+                ) VALUES (
+                    ?1, ?2, ?3, ?4, ?5,
+                    ?6, ?7, ?8, 0,
+                    ?9, ?10, ?11, datetime('now'), datetime('now')
+                )
+                "#,
+                rusqlite::params![
+                    new_id,
+                    from_period_type,
+                    to_period_id,
+                    item.category,
+                    item.custom_category_name,
+                    item.title,
+                    item.description,
+                    max_p + 1,
+                    item.linked_task_id,
+                    item.linked_movie_id,
+                    item.linked_series_id,
+                ],
+            )
+            .map_err(|e| format!("Failed to carry forward item: {}", e))?;
+
+            carried_count += 1;
+        }
+    }
+
+    Ok(carried_count)
 }
 
 // =============================================================

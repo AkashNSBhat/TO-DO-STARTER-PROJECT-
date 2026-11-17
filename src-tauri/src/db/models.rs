@@ -487,6 +487,35 @@ pub struct PlanItem {
     pub updated_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreatePlanItemInput {
+    pub period_type: String,
+    pub period_identifier: String,
+    pub category: String,
+    pub custom_category_name: Option<String>,
+    pub title: String,
+    pub description: Option<String>,
+    pub priority_order: Option<i32>,
+    pub linked_task_id: Option<String>,
+    pub linked_movie_id: Option<String>,
+    pub linked_series_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdatePlanItemInput {
+    pub id: String,
+    pub category: String,
+    pub custom_category_name: Option<String>,
+    pub title: String,
+    pub description: Option<String>,
+    pub priority_order: Option<i32>,
+    pub linked_task_id: Option<String>,
+    pub linked_movie_id: Option<String>,
+    pub linked_series_id: Option<String>,
+}
+
 // =============================================================
 // Activity History Models
 // =============================================================

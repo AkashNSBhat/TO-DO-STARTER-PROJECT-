@@ -46,7 +46,7 @@ export type SeriesFilter = 'all' | 'planned' | 'watching' | 'completed';
 export type ArchiveFilter = 'all' | 'movies' | 'movie' | 'series';
 
 export type PlanPeriod = 'weekly' | 'monthly' | 'yearly';
-export type PlanCategory = 'entertainment' | 'learning' | 'personal_goals' | 'projects';
+export type PlanCategory = 'entertainment' | 'learning' | 'personal_goals' | 'projects' | 'custom';
 
 export type ActivityType = 
   | 'task_completed' 
@@ -333,6 +333,31 @@ export interface PlanItem {
   linkedSeriesId?: string;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface CreatePlanItemInput {
+  periodType: PlanPeriod;
+  periodIdentifier: string;
+  category: PlanCategory;
+  customCategoryName?: string;
+  title: string;
+  description?: string;
+  priorityOrder?: number;
+  linkedTaskId?: string;
+  linkedMovieId?: string;
+  linkedSeriesId?: string;
+}
+
+export interface UpdatePlanItemInput {
+  id: string;
+  category: PlanCategory;
+  customCategoryName?: string;
+  title: string;
+  description?: string;
+  priorityOrder?: number;
+  linkedTaskId?: string;
+  linkedMovieId?: string;
+  linkedSeriesId?: string;
 }
 
 // -------------------------------------------------------------
