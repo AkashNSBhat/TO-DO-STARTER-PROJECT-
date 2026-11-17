@@ -1,12 +1,21 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { DatabaseClient } from "../lib/db/client";
-import { ArchiveItem, ArchiveFilter } from "../lib/db/types";
+import {
+  ArchiveItem,
+  ArchiveFilter,
+  AddHistoricalInput,
+  UpdateArchivedInput,
+} from "../lib/db/types";
+
+export type ArchiveSortOption = "date" | "rating" | "year" | "title";
 
 export function useArchive(initialFilter: ArchiveFilter = "all") {
   const [items, setItems] = useState<ArchiveItem[]>([]);
   const [filter, setFilter] = useState<ArchiveFilter>(initialFilter);
   const [genreFilter, setGenreFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<ArchiveSortOption>("date");
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,6 +32,74 @@ export function useArchive(initialFilter: ArchiveFilter = "all") {
       setLoading(false);
     }
   }, []);
+
+  const addHistoricalEntry = useCallback(
+    async (input: AddHistoricalInput): Promise<ArchiveItem | null> => {
+      try {
+        const created = await DatabaseClient.addHistoricalEntry(input);
+        setItems((prev) => [created, ...prev]);
+        return created;
+      } catch (err) {
+        console.error("[useArchive] Error adding historical entry:", err);
+        setError(err instanceof Error ? err.message : String(err));
+        throw err;
+      }
+    },
+    []
+  );
+
+  const updateArchivedEntry = useCallback(
+    async (input: UpdateArchivedInput): Promise<boolean> => {
+      try {
+        await DatabaseClient.updateArchivedEntry(input);
+        setItems((prev) =>
+          prev.map((i) =>
+            i.id === input.id
+              ? {
+                  ...i,
+                  title: input.title,
+                  releaseYear: input.releaseYear,
+                  rating: input.rating,
+                  dateCompleted: input.dateCompleted || i.dateCompleted,
+                  genres: input.genres || i.genres,
+                  notes: input.notes,
+                  totalSeasons: input.totalSeasons,
+                  totalEpisodes: input.totalEpisodes,
+                }
+              : i
+          )
+        );
+        return true;
+      } catch (err) {
+        console.error("[useArchive] Error updating archived entry:", err);
+        setError(err instanceof Error ? err.message : String(err));
+        return false;
+      }
+    },
+    []
+  );
+
+  const deleteArchivedEntry = useCallback(
+    async (id: string, itemType: string): Promise<boolean> => {
+      try {
+        await DatabaseClient.deleteArchivedEntry(id, itemType);
+        setItems((prev) => prev.filter((i) => i.id !== id));
+        return true;
+      } catch (err) {
+        console.error("[useArchive] Error deleting archived entry:", err);
+        setError(err instanceof Error ? err.message : String(err));
+        return false;
+      }
+    },
+    []
+  );
+
+  const checkDuplicate = useCallback(
+    async (title: string, releaseYear: number | undefined, itemType: string): Promise<boolean> => {
+      return await DatabaseClient.checkArchiveDuplicate(title, releaseYear, itemType);
+    },
+    []
+  );
 
   useEffect(() => {
     fetchArchive();
@@ -50,9 +127,9 @@ export function useArchive(initialFilter: ArchiveFilter = "all") {
     return Array.from(set).sort((a, b) => b - a);
   }, [items]);
 
-  // Filtered items by type, genre, and release year
+  // Filter and sort items
   const filteredItems = useMemo(() => {
-    return items.filter((item) => {
+    let list = items.filter((item) => {
       const matchesType =
         filter === "all"
           ? true
@@ -66,9 +143,32 @@ export function useArchive(initialFilter: ArchiveFilter = "all") {
       const matchesYear =
         yearFilter === "all" ? true : String(item.releaseYear) === yearFilter;
 
-      return matchesType && matchesGenre && matchesYear;
+      let matchesSearch = true;
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        matchesSearch =
+          item.title.toLowerCase().includes(q) ||
+          item.genres.some((g) => g.toLowerCase().includes(q)) ||
+          (item.notes ? item.notes.toLowerCase().includes(q) : false);
+      }
+
+      return matchesType && matchesGenre && matchesYear && matchesSearch;
     });
-  }, [items, filter, genreFilter, yearFilter]);
+
+    return list.sort((a, b) => {
+      if (sortBy === "rating") {
+        return (b.rating ?? 0) - (a.rating ?? 0);
+      }
+      if (sortBy === "year") {
+        return (b.releaseYear ?? 0) - (a.releaseYear ?? 0);
+      }
+      if (sortBy === "title") {
+        return a.title.localeCompare(b.title);
+      }
+      // Default: date completed descending
+      return b.dateCompleted.localeCompare(a.dateCompleted);
+    });
+  }, [items, filter, genreFilter, yearFilter, searchQuery, sortBy]);
 
   return {
     items,
@@ -79,8 +179,16 @@ export function useArchive(initialFilter: ArchiveFilter = "all") {
     setGenreFilter,
     yearFilter,
     setYearFilter,
+    searchQuery,
+    setSearchQuery,
+    sortBy,
+    setSortBy,
     availableGenres,
     availableYears,
+    addHistoricalEntry,
+    updateArchivedEntry,
+    deleteArchivedEntry,
+    checkDuplicate,
     loading,
     error,
     refetch: fetchArchive,

@@ -1210,6 +1210,80 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
       return JSON.parse(JSON.stringify(list));
     }
 
+    case "check_archive_duplicate": {
+      const title = (args.title || "").trim().toLowerCase();
+      const releaseYear = args.releaseYear ?? args.release_year;
+      const itemType = args.itemType ?? args.item_type;
+
+      const dup = activeArchive.some(
+        (a) =>
+          a.type === itemType &&
+          a.title.toLowerCase() === title &&
+          (a.releaseYear === releaseYear || (!a.releaseYear && !releaseYear))
+      );
+      return dup;
+    }
+
+    case "add_historical_entry": {
+      const input = args.input;
+      const title = (input.title || "").trim();
+      const releaseYear = input.releaseYear;
+      const itemType = input.itemType;
+
+      const dup = activeArchive.some(
+        (a) =>
+          a.type === itemType &&
+          a.title.toLowerCase() === title.toLowerCase() &&
+          (a.releaseYear === releaseYear || (!a.releaseYear && !releaseYear))
+      );
+      if (dup) {
+        throw new Error(`An archived ${itemType} titled '${title}' already exists for this release year.`);
+      }
+
+      const id = `${itemType === "movie" ? "mov" : "ser"}-hist-${Date.now()}`;
+      const newItem: ArchiveItem = {
+        id,
+        type: itemType,
+        title,
+        releaseYear,
+        rating: input.rating,
+        genres: input.genres || [],
+        dateCompleted: input.dateCompleted || new Date().toISOString().slice(0, 10),
+        isHistorical: true,
+        notes: input.notes,
+        totalSeasons: input.totalSeasons,
+        totalEpisodes: input.totalEpisodes,
+      };
+
+      activeArchive.unshift(newItem);
+      return JSON.parse(JSON.stringify(newItem));
+    }
+
+    case "update_archived_entry": {
+      const input = args.input;
+      const item = activeArchive.find((a) => a.id === input.id);
+      if (item) {
+        item.title = input.title.trim();
+        item.releaseYear = input.releaseYear;
+        item.rating = input.rating;
+        if (input.dateCompleted) item.dateCompleted = input.dateCompleted;
+        if (input.genres) item.genres = input.genres;
+        item.notes = input.notes;
+        item.totalSeasons = input.totalSeasons;
+        item.totalEpisodes = input.totalEpisodes;
+      }
+      return true;
+    }
+
+    case "delete_archived_entry": {
+      const id = args.id;
+      const idx = activeArchive.findIndex((a) => a.id === id);
+      if (idx !== -1) {
+        activeArchive.splice(idx, 1);
+      }
+      return true;
+    }
+
     // -------------------------------------------------------------
     // Plan Module
     // -------------------------------------------------------------

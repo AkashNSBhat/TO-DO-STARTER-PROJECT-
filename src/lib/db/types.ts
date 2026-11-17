@@ -283,6 +283,35 @@ export interface ArchiveItem {
   genres: string[];
   dateCompleted: string;
   isHistorical: boolean;
+  notes?: string;
+  totalSeasons?: number;
+  totalEpisodes?: number;
+}
+
+export interface AddHistoricalInput {
+  itemType: 'movie' | 'series';
+  title: string;
+  releaseYear?: number;
+  rating?: number;
+  genres?: string[];
+  dateCompleted?: string;
+  totalSeasons?: number;
+  totalEpisodes?: number;
+  notes?: string;
+  posterUrl?: string;
+}
+
+export interface UpdateArchivedInput {
+  id: string;
+  itemType: 'movie' | 'series';
+  title: string;
+  releaseYear?: number;
+  rating?: number;
+  dateCompleted?: string;
+  genres?: string[];
+  notes?: string;
+  totalSeasons?: number;
+  totalEpisodes?: number;
 }
 
 // -------------------------------------------------------------

@@ -23,6 +23,8 @@ import {
   ToggleEpisodeResult,
   ArchiveItem,
   ArchiveFilter,
+  AddHistoricalInput,
+  UpdateArchivedInput,
   PlanItem,
   PlanPeriod,
   ActivityHistoryItem,
@@ -835,13 +837,78 @@ export class DatabaseClient {
     if (!this.isTauri()) {
       const all: ArchiveItem[] = this.localData.archiveItems;
       if (filter === "all") return all;
-      if (filter === "movies" || filter === "movie") return all.filter((i) => i.type === "movie");
-      if (filter === "series") return all.filter((i) => i.type === "series");
+      if (filter === "movies" || filter === "movie") return all.filter((i: ArchiveItem) => i.type === "movie");
+      if (filter === "series") return all.filter((i: ArchiveItem) => i.type === "series");
       return all;
     }
     return await invoke<ArchiveItem[]>("get_archive_data", {
       filter: filter === "all" ? null : filter,
     });
+  }
+
+  static async checkArchiveDuplicate(title: string, releaseYear: number | undefined, itemType: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      const match = this.localData.archiveItems.some(
+        (i: ArchiveItem) =>
+          i.type === itemType &&
+          i.title.toLowerCase() === title.toLowerCase().trim() &&
+          (i.releaseYear === releaseYear || (!i.releaseYear && !releaseYear))
+      );
+      return match;
+    }
+    return await invoke<boolean>("check_archive_duplicate", { title, releaseYear, itemType });
+  }
+
+  static async addHistoricalEntry(input: AddHistoricalInput): Promise<ArchiveItem> {
+    if (!this.isTauri()) {
+      const id = `${input.itemType === "movie" ? "mov" : "ser"}-hist-${Date.now()}`;
+      const newItem: ArchiveItem = {
+        id,
+        type: input.itemType,
+        title: input.title.trim(),
+        releaseYear: input.releaseYear,
+        rating: input.rating,
+        genres: input.genres || [],
+        dateCompleted: input.dateCompleted || new Date().toISOString().slice(0, 10),
+        isHistorical: true,
+        notes: input.notes,
+        totalSeasons: input.totalSeasons,
+        totalEpisodes: input.totalEpisodes,
+      };
+
+      this.localData.archiveItems.unshift(newItem);
+      return newItem;
+    }
+
+    return await invoke<ArchiveItem>("add_historical_entry", { input });
+  }
+
+  static async updateArchivedEntry(input: UpdateArchivedInput): Promise<boolean> {
+    if (!this.isTauri()) {
+      const item = this.localData.archiveItems.find((i: ArchiveItem) => i.id === input.id);
+      if (item) {
+        item.title = input.title.trim();
+        item.releaseYear = input.releaseYear;
+        item.rating = input.rating;
+        if (input.dateCompleted) item.dateCompleted = input.dateCompleted;
+        if (input.genres) item.genres = input.genres;
+        item.notes = input.notes;
+        item.totalSeasons = input.totalSeasons;
+        item.totalEpisodes = input.totalEpisodes;
+      }
+      return true;
+    }
+
+    return await invoke<boolean>("update_archived_entry", { input });
+  }
+
+  static async deleteArchivedEntry(id: string, itemType: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      this.localData.archiveItems = this.localData.archiveItems.filter((i: ArchiveItem) => i.id !== id);
+      return true;
+    }
+
+    return await invoke<boolean>("delete_archived_entry", { id, itemType });
   }
 
   // =============================================================

@@ -105,20 +105,20 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 5 — Entertainment Archive
-- [ ] **5.1 Combined entertainment library**: Unified archive view for all completed content.
-- [ ] **5.2 Separate Movies and Series sections**: Dedicated sub-views.
-- [ ] **5.3 Completed entertainment collection**: Permanent record of everything finished.
-- [ ] **5.4 Genre organization**: Genre aggregations and distribution.
-- [ ] **5.5 Personal ratings**: Rating badges and distribution overview.
-- [ ] **5.6 Completion dates**: Sorting and grouping by completion year/month.
-- [ ] **5.7 Historical movie addition**: Direct-to-archive entry for previously watched movies.
-- [ ] **5.8 Historical series addition**: Direct-to-archive entry for previously completed series.
-- [ ] **5.9 Optional approximate completion year**: Historical year picker without requiring exact day.
-- [ ] **5.10 Optional historical season and episode information**: Record historical series stats.
-- [ ] **5.11 Search and filters**: Full-text search and multi-criteria filters.
-- [ ] **5.12 Editing archived records**: Update ratings, notes, and dates.
-- [ ] **5.13 Duplicate prevention**: Title and year uniqueness checks.
-- [ ] **5.14 Permanent archive persistence**: Guarantees that records are never purged automatically.
+- [x] **5.1 Combined entertainment library**: Unified archive view for all completed content.
+- [x] **5.2 Separate Movies and Series sections**: Dedicated sub-views.
+- [x] **5.3 Completed entertainment collection**: Permanent record of everything finished.
+- [x] **5.4 Genre organization**: Genre aggregations and distribution.
+- [x] **5.5 Personal ratings**: Rating badges and distribution overview.
+- [x] **5.6 Completion dates**: Sorting and grouping by completion year/month.
+- [x] **5.7 Historical movie addition**: Direct-to-archive entry for previously watched movies.
+- [x] **5.8 Historical series addition**: Direct-to-archive entry for previously completed series.
+- [x] **5.9 Optional approximate completion year**: Historical year picker without requiring exact day.
+- [x] **5.10 Optional historical season and episode information**: Record historical series stats.
+- [x] **5.11 Search and filters**: Full-text search and multi-criteria filters.
+- [x] **5.12 Editing archived records**: Update ratings, notes, and dates.
+- [x] **5.13 Duplicate prevention**: Title and year uniqueness checks.
+- [x] **5.14 Permanent archive persistence**: Guarantees that records are never purged automatically.
 
 ---
 

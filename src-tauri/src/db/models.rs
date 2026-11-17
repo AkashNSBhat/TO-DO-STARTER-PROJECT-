@@ -429,6 +429,39 @@ pub struct ArchiveItem {
     pub genres: Vec<String>,
     pub date_completed: String,
     pub is_historical: bool,
+    pub notes: Option<String>,
+    pub total_seasons: Option<i32>,
+    pub total_episodes: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AddHistoricalInput {
+    pub item_type: String,
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub rating: Option<f64>,
+    pub genres: Option<Vec<String>>,
+    pub date_completed: Option<String>,
+    pub total_seasons: Option<i32>,
+    pub total_episodes: Option<i64>,
+    pub notes: Option<String>,
+    pub poster_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateArchivedInput {
+    pub id: String,
+    pub item_type: String,
+    pub title: String,
+    pub release_year: Option<i32>,
+    pub rating: Option<f64>,
+    pub date_completed: Option<String>,
+    pub genres: Option<Vec<String>>,
+    pub notes: Option<String>,
+    pub total_seasons: Option<i32>,
+    pub total_episodes: Option<i64>,
 }
 
 // =============================================================

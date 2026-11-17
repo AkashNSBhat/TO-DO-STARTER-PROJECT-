@@ -1726,17 +1726,22 @@ pub fn get_archive_data(
     let mut stmt = conn
         .prepare(
             r#"
-            SELECT id, 'movie' AS item_type, title, release_year, personal_rating,
-                   COALESCE(date_watched, created_at) AS date_completed, is_historical,
-                   (SELECT GROUP_CONCAT(g.name, ',') FROM movie_genres mg JOIN genres g ON mg.genre_id = g.id WHERE mg.movie_id = movies.id) AS genres_csv
-            FROM movies
-            WHERE (status = 'completed' OR is_historical = 1) AND (?1 = 'all' OR ?1 = 'movies' OR ?1 = 'movie')
+            SELECT 
+                m.id, 'movie' AS item_type, m.title, m.release_year, m.personal_rating,
+                COALESCE(m.date_watched, m.created_at) AS date_completed, m.is_historical,
+                (SELECT GROUP_CONCAT(g.name, ',') FROM movie_genres mg JOIN genres g ON mg.genre_id = g.id WHERE mg.movie_id = m.id) AS genres_csv,
+                m.notes, NULL AS total_seasons, NULL AS total_episodes
+            FROM movies m
+            WHERE (m.status = 'completed' OR m.is_historical = 1) AND (?1 = 'all' OR ?1 = 'movies' OR ?1 = 'movie')
             UNION ALL
-            SELECT id, 'series' AS item_type, title, release_year, personal_rating,
-                   COALESCE(date_completed, created_at) AS date_completed, is_historical,
-                   (SELECT GROUP_CONCAT(g.name, ',') FROM series_genres sg JOIN genres g ON sg.genre_id = g.id WHERE sg.series_id = series.id) AS genres_csv
-            FROM series
-            WHERE (status = 'completed' OR is_historical = 1) AND (?1 = 'all' OR ?1 = 'series')
+            SELECT 
+                s.id, 'series' AS item_type, s.title, s.release_year, s.personal_rating,
+                COALESCE(s.date_completed, s.created_at) AS date_completed, s.is_historical,
+                (SELECT GROUP_CONCAT(g.name, ',') FROM series_genres sg JOIN genres g ON sg.genre_id = g.id WHERE sg.series_id = s.id) AS genres_csv,
+                s.notes, s.total_seasons,
+                (SELECT COUNT(*) FROM episodes e WHERE e.series_id = s.id) AS total_episodes
+            FROM series s
+            WHERE (s.status = 'completed' OR s.is_historical = 1) AND (?1 = 'all' OR ?1 = 'series')
             ORDER BY date_completed DESC
             "#,
         )
@@ -1747,7 +1752,7 @@ pub fn get_archive_data(
             let is_hist: i32 = row.get(6)?;
             let genres_csv: Option<String> = row.get(7)?;
             let genres = genres_csv
-                .map(|s| s.split(',').map(|g| g.trim().to_string()).collect())
+                .map(|s| s.split(',').map(|g| g.trim().to_string()).filter(|s| !s.is_empty()).collect())
                 .unwrap_or_default();
 
             Ok(ArchiveItem {
@@ -1759,6 +1764,9 @@ pub fn get_archive_data(
                 date_completed: row.get(5)?,
                 is_historical: is_hist == 1,
                 genres,
+                notes: row.get(8)?,
+                total_seasons: row.get(9)?,
+                total_episodes: row.get(10)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -1766,6 +1774,313 @@ pub fn get_archive_data(
         .collect();
 
     Ok(items)
+}
+
+#[tauri::command]
+pub fn check_archive_duplicate(
+    state: State<'_, AppState>,
+    title: String,
+    release_year: Option<i32>,
+    item_type: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let title_trimmed = title.trim();
+    let count: i64 = if item_type == "movie" {
+        conn.query_row(
+            "SELECT COUNT(*) FROM movies WHERE LOWER(title) = LOWER(?1) AND (release_year = ?2 OR (?2 IS NULL AND release_year IS NULL))",
+            rusqlite::params![title_trimmed, release_year],
+            |r| r.get(0),
+        ).unwrap_or(0)
+    } else {
+        conn.query_row(
+            "SELECT COUNT(*) FROM series WHERE LOWER(title) = LOWER(?1) AND (release_year = ?2 OR (?2 IS NULL AND release_year IS NULL))",
+            rusqlite::params![title_trimmed, release_year],
+            |r| r.get(0),
+        ).unwrap_or(0)
+    };
+
+    Ok(count > 0)
+}
+
+#[tauri::command]
+pub fn add_historical_entry(
+    state: State<'_, AppState>,
+    input: AddHistoricalInput,
+) -> Result<ArchiveItem, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let title_trimmed = input.title.trim().to_string();
+
+    // 5.13 Duplicate check
+    let dup_count: i64 = if input.item_type == "movie" {
+        conn.query_row(
+            "SELECT COUNT(*) FROM movies WHERE LOWER(title) = LOWER(?1) AND (release_year = ?2 OR (?2 IS NULL AND release_year IS NULL))",
+            rusqlite::params![title_trimmed, input.release_year],
+            |r| r.get(0),
+        ).unwrap_or(0)
+    } else {
+        conn.query_row(
+            "SELECT COUNT(*) FROM series WHERE LOWER(title) = LOWER(?1) AND (release_year = ?2 OR (?2 IS NULL AND release_year IS NULL))",
+            rusqlite::params![title_trimmed, input.release_year],
+            |r| r.get(0),
+        ).unwrap_or(0)
+    };
+
+    if dup_count > 0 {
+        return Err(format!(
+            "An archived {} titled '{}' already exists for this release year.",
+            input.item_type, title_trimmed
+        ));
+    }
+
+    let completion_date = input
+        .date_completed
+        .filter(|d| !d.trim().is_empty())
+        .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string());
+
+    let genres_list = input.genres.unwrap_or_default();
+
+    if input.item_type == "movie" {
+        let movie_id = format!("mov-hist-{}", uuid::Uuid::new_v4());
+        conn.execute(
+            r#"
+            INSERT INTO movies (id, title, release_year, poster_url, status, personal_rating, date_watched, notes, is_historical, archived_at, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, 'completed', ?5, ?6, ?7, 1, datetime('now'), datetime('now'), datetime('now'))
+            "#,
+            rusqlite::params![
+                movie_id,
+                title_trimmed,
+                input.release_year,
+                input.poster_url,
+                input.rating,
+                completion_date,
+                input.notes,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert historical movie: {}", e))?;
+
+        for genre_name in &genres_list {
+            let trimmed = genre_name.trim();
+            if !trimmed.is_empty() {
+                let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                    rusqlite::params![genre_id, trimmed],
+                );
+                let actual_genre_id: String = conn
+                    .query_row("SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE", [trimmed], |r| r.get(0))
+                    .unwrap_or(genre_id);
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO movie_genres (movie_id, genre_id) VALUES (?1, ?2)",
+                    rusqlite::params![movie_id, actual_genre_id],
+                );
+            }
+        }
+
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'movie_completed', 'movie', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, movie_id, title_trimmed],
+        );
+
+        Ok(ArchiveItem {
+            id: movie_id,
+            item_type: "movie".to_string(),
+            title: title_trimmed,
+            release_year: input.release_year,
+            rating: input.rating,
+            genres: genres_list,
+            date_completed: completion_date,
+            is_historical: true,
+            notes: input.notes,
+            total_seasons: None,
+            total_episodes: None,
+        })
+    } else {
+        let series_id = format!("ser-hist-{}", uuid::Uuid::new_v4());
+        let total_seasons = input.total_seasons.unwrap_or(1);
+
+        conn.execute(
+            r#"
+            INSERT INTO series (id, title, release_year, poster_url, status, total_seasons, personal_rating, date_completed, notes, is_historical, archived_at, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, 'completed', ?5, ?6, ?7, ?8, 1, datetime('now'), datetime('now'), datetime('now'))
+            "#,
+            rusqlite::params![
+                series_id,
+                title_trimmed,
+                input.release_year,
+                input.poster_url,
+                total_seasons,
+                input.rating,
+                completion_date,
+                input.notes,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert historical series: {}", e))?;
+
+        for genre_name in &genres_list {
+            let trimmed = genre_name.trim();
+            if !trimmed.is_empty() {
+                let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                    rusqlite::params![genre_id, trimmed],
+                );
+                let actual_genre_id: String = conn
+                    .query_row("SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE", [trimmed], |r| r.get(0))
+                    .unwrap_or(genre_id);
+                let _ = conn.execute(
+                    "INSERT OR IGNORE INTO series_genres (series_id, genre_id) VALUES (?1, ?2)",
+                    rusqlite::params![series_id, actual_genre_id],
+                );
+            }
+        }
+
+        let act_id = uuid::Uuid::new_v4().to_string();
+        let _ = conn.execute(
+            "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'series_completed', 'series', ?2, ?3, datetime('now'))",
+            rusqlite::params![act_id, series_id, title_trimmed],
+        );
+
+        Ok(ArchiveItem {
+            id: series_id,
+            item_type: "series".to_string(),
+            title: title_trimmed,
+            release_year: input.release_year,
+            rating: input.rating,
+            genres: genres_list,
+            date_completed: completion_date,
+            is_historical: true,
+            notes: input.notes,
+            total_seasons: Some(total_seasons),
+            total_episodes: input.total_episodes,
+        })
+    }
+}
+
+#[tauri::command]
+pub fn update_archived_entry(
+    state: State<'_, AppState>,
+    input: UpdateArchivedInput,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let title_trimmed = input.title.trim();
+
+    if input.item_type == "movie" {
+        conn.execute(
+            r#"
+            UPDATE movies
+            SET title = ?1, release_year = ?2, personal_rating = ?3, date_watched = ?4, notes = ?5, updated_at = datetime('now')
+            WHERE id = ?6
+            "#,
+            rusqlite::params![
+                title_trimmed,
+                input.release_year,
+                input.rating,
+                input.date_completed,
+                input.notes,
+                input.id,
+            ],
+        )
+        .map_err(|e| format!("Failed to update archived movie: {}", e))?;
+
+        if let Some(genres) = input.genres {
+            let _ = conn.execute("DELETE FROM movie_genres WHERE movie_id = ?1", [&input.id]);
+            for genre_name in genres {
+                let trimmed = genre_name.trim();
+                if !trimmed.is_empty() {
+                    let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                    let _ = conn.execute(
+                        "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                        rusqlite::params![genre_id, trimmed],
+                    );
+                    let actual_genre_id: String = conn
+                        .query_row("SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE", [trimmed], |r| r.get(0))
+                        .unwrap_or(genre_id);
+                    let _ = conn.execute(
+                        "INSERT OR IGNORE INTO movie_genres (movie_id, genre_id) VALUES (?1, ?2)",
+                        rusqlite::params![input.id, actual_genre_id],
+                    );
+                }
+            }
+        }
+    } else {
+        conn.execute(
+            r#"
+            UPDATE series
+            SET title = ?1, release_year = ?2, personal_rating = ?3, date_completed = ?4, notes = ?5,
+                total_seasons = COALESCE(?6, total_seasons),
+                updated_at = datetime('now')
+            WHERE id = ?7
+            "#,
+            rusqlite::params![
+                title_trimmed,
+                input.release_year,
+                input.rating,
+                input.date_completed,
+                input.notes,
+                input.total_seasons,
+                input.id,
+            ],
+        )
+        .map_err(|e| format!("Failed to update archived series: {}", e))?;
+
+        if let Some(genres) = input.genres {
+            let _ = conn.execute("DELETE FROM series_genres WHERE series_id = ?1", [&input.id]);
+            for genre_name in genres {
+                let trimmed = genre_name.trim();
+                if !trimmed.is_empty() {
+                    let genre_id = format!("gen-{}", trimmed.to_lowercase().replace(' ', "-"));
+                    let _ = conn.execute(
+                        "INSERT OR IGNORE INTO genres (id, name, created_at) VALUES (?1, ?2, datetime('now'))",
+                        rusqlite::params![genre_id, trimmed],
+                    );
+                    let actual_genre_id: String = conn
+                        .query_row("SELECT id FROM genres WHERE name = ?1 COLLATE NOCASE", [trimmed], |r| r.get(0))
+                        .unwrap_or(genre_id);
+                    let _ = conn.execute(
+                        "INSERT OR IGNORE INTO series_genres (series_id, genre_id) VALUES (?1, ?2)",
+                        rusqlite::params![input.id, actual_genre_id],
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub fn delete_archived_entry(
+    state: State<'_, AppState>,
+    id: String,
+    item_type: String,
+) -> Result<bool, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    if item_type == "movie" {
+        conn.execute("DELETE FROM movies WHERE id = ?1", [&id])
+            .map_err(|e| format!("Failed to delete archived movie: {}", e))?;
+    } else {
+        conn.execute("DELETE FROM series WHERE id = ?1", [&id])
+            .map_err(|e| format!("Failed to delete archived series: {}", e))?;
+    }
+
+    Ok(true)
 }
 
 // =============================================================
