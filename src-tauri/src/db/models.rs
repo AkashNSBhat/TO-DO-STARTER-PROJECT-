@@ -559,15 +559,45 @@ pub struct MonthlyTrendStat {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct GenreStat {
+    pub genre: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RatingDistStat {
+    pub rating: i32,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HeatmapDayStat {
+    pub date: String,
+    pub count: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StatisticsData {
     pub total_tasks_completed: i64,
     pub tasks_completion_rate: f64,
     pub current_streak_days: i32,
     pub longest_streak_days: i32,
+    pub daily_task_average: f64,
     pub total_movies_completed: i64,
+    pub average_movie_rating: f64,
     pub total_episodes_completed: i64,
+    pub total_seasons_completed: i64,
+    pub total_series_completed: i64,
+    pub average_series_rating: f64,
     pub total_watch_time_hours: f64,
     pub completions_by_category: Vec<CategoryStat>,
     pub completions_by_day_of_week: Vec<DayOfWeekStat>,
     pub monthly_trend: Vec<MonthlyTrendStat>,
+    pub genre_distribution: Vec<GenreStat>,
+    pub rating_distribution: Vec<RatingDistStat>,
+    pub heatmap_data: Vec<HeatmapDayStat>,
+    pub plan_completion_rate: f64,
 }

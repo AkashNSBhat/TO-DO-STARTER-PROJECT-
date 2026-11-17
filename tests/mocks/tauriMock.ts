@@ -551,8 +551,13 @@ const INITIAL_STATISTICS: StatisticsData = {
   tasksCompletionRate: 87.5,
   currentStreakDays: 14,
   longestStreakDays: 28,
+  dailyTaskAverage: 3.5,
   totalMoviesCompleted: 18,
+  averageMovieRating: 9.2,
   totalEpisodesCompleted: 94,
+  totalSeasonsCompleted: 8,
+  totalSeriesCompleted: 2,
+  averageSeriesRating: 9.4,
   totalWatchTimeHours: 142.5,
   completionsByCategory: [
     { category: "Work", color: "#3b82f6", count: 18 },
@@ -575,6 +580,36 @@ const INITIAL_STATISTICS: StatisticsData = {
     { month: "Oct", tasks: 38, media: 16 },
     { month: "Nov", tasks: 42, media: 18 },
   ],
+  genreDistribution: [
+    { genre: "Drama", count: 12 },
+    { genre: "Sci-Fi", count: 9 },
+    { genre: "Action", count: 6 },
+    { genre: "Mystery", count: 5 },
+    { genre: "Thriller", count: 4 },
+    { genre: "Animation", count: 3 },
+  ],
+  ratingDistribution: [
+    { rating: 1, count: 0 },
+    { rating: 2, count: 0 },
+    { rating: 3, count: 0 },
+    { rating: 4, count: 0 },
+    { rating: 5, count: 0 },
+    { rating: 6, count: 0 },
+    { rating: 7, count: 2 },
+    { rating: 8, count: 4 },
+    { rating: 9, count: 8 },
+    { rating: 10, count: 6 },
+  ],
+  heatmapData: [
+    { date: "2026-11-10", count: 4 },
+    { date: "2026-11-11", count: 2 },
+    { date: "2026-11-12", count: 5 },
+    { date: "2026-11-13", count: 3 },
+    { date: "2026-11-14", count: 4 },
+    { date: "2026-11-15", count: 6 },
+    { date: "2026-11-16", count: 5 },
+  ],
+  planCompletionRate: 66.7,
 };
 
 // =============================================================
@@ -707,6 +742,14 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
               p.isCompleted = true;
               p.completedAt = "2026-11-16 12:00:00";
             }
+          });
+          activeActivityHistory.unshift({
+            id: `act-${Date.now()}`,
+            activityType: "task_completed",
+            entityType: "task",
+            entityId: taskId,
+            title: `Completed task: ${task.title}`,
+            timestamp: "2026-11-16 12:00:00",
           });
         }
       }
@@ -1337,6 +1380,16 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
       if (item) {
         item.isCompleted = isCompleted;
         item.completedAt = isCompleted ? "2026-11-16 12:00:00" : undefined;
+        if (isCompleted) {
+          activeActivityHistory.unshift({
+            id: `act-${Date.now()}`,
+            activityType: "plan_completed",
+            entityType: "plan_item",
+            entityId: itemId,
+            title: `Achieved plan objective: ${item.title}`,
+            timestamp: "2026-11-16 12:00:00",
+          });
+        }
       }
       return true;
     }
@@ -1504,7 +1557,22 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
     // -------------------------------------------------------------
     case "get_activity_history": {
       const limit = typeof args.limit === "number" ? args.limit : 50;
-      return JSON.parse(JSON.stringify(activeActivityHistory.slice(0, limit)));
+      const activityType = args.activityType || args.activity_type || "all";
+      const dateFilter = args.dateFilter || args.date_filter || "all";
+
+      let list = [...activeActivityHistory];
+      if (activityType !== "all") {
+        list = list.filter((a) => a.activityType.startsWith(activityType));
+      }
+      if (dateFilter === "today") {
+        list = list.filter((a) => a.timestamp.startsWith("2026-11-16"));
+      } else if (dateFilter === "week") {
+        list = list.filter((a) => a.timestamp >= "2026-11-09");
+      } else if (dateFilter === "month") {
+        list = list.filter((a) => a.timestamp >= "2026-10-16");
+      }
+
+      return JSON.parse(JSON.stringify(list.slice(0, limit)));
     }
 
     case "get_statistics": {

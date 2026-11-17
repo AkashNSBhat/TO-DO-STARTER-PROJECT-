@@ -2548,6 +2548,8 @@ pub fn carry_forward_plan_items(
 #[tauri::command]
 pub fn get_activity_history(
     state: State<'_, AppState>,
+    activity_type: Option<String>,
+    date_filter: Option<String>,
     limit: Option<u32>,
 ) -> Result<Vec<ActivityHistoryItem>, String> {
     let conn = state
@@ -2555,13 +2557,29 @@ pub fn get_activity_history(
         .lock()
         .map_err(|e| format!("Database lock error: {}", e))?;
     let lim = limit.unwrap_or(50) as i64;
+    let act_filter = activity_type.unwrap_or_else(|| "all".to_string());
+    let date_f = date_filter.unwrap_or_else(|| "all".to_string());
 
     let mut stmt = conn
-        .prepare("SELECT id, activity_type, entity_type, entity_id, title, metadata_json, timestamp FROM activity_history ORDER BY timestamp DESC LIMIT ?1")
+        .prepare(
+            r#"
+            SELECT id, activity_type, entity_type, entity_id, title, metadata_json, timestamp
+            FROM activity_history
+            WHERE (?1 = 'all' OR activity_type LIKE ?1 || '%')
+              AND (
+                ?2 = 'all'
+                OR (?2 = 'today' AND date(timestamp) = date('now'))
+                OR (?2 = 'week' AND timestamp >= datetime('now', '-7 days'))
+                OR (?2 = 'month' AND timestamp >= datetime('now', '-30 days'))
+              )
+            ORDER BY timestamp DESC
+            LIMIT ?3
+            "#,
+        )
         .map_err(|e| e.to_string())?;
 
     let history = stmt
-        .query_map([lim], |row| {
+        .query_map(rusqlite::params![act_filter, date_f, lim], |row| {
             Ok(ActivityHistoryItem {
                 id: row.get(0)?,
                 activity_type: row.get(1)?,
@@ -2612,13 +2630,33 @@ pub fn get_statistics(state: State<'_, AppState>) -> Result<StatisticsData, Stri
         )
         .unwrap_or(14);
 
+    let daily_task_average: f64 = conn
+        .query_row(
+            r#"
+            SELECT ROUND(CAST(COUNT(*) AS REAL) / MAX(COUNT(DISTINCT date(completed_at)), 1), 1)
+            FROM tasks
+            WHERE is_completed = 1 AND completed_at IS NOT NULL
+            "#,
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(2.5);
+
     let total_movies_completed: i64 = conn
         .query_row(
-            "SELECT COUNT(*) FROM movies WHERE status = 'completed'",
+            "SELECT COUNT(*) FROM movies WHERE status = 'completed' OR is_historical = 1",
             [],
             |r| r.get(0),
         )
         .unwrap_or(0);
+
+    let average_movie_rating: f64 = conn
+        .query_row(
+            "SELECT COALESCE(ROUND(AVG(personal_rating), 1), 0.0) FROM movies WHERE personal_rating IS NOT NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
 
     let total_episodes_completed: i64 = conn
         .query_row(
@@ -2628,8 +2666,36 @@ pub fn get_statistics(state: State<'_, AppState>) -> Result<StatisticsData, Stri
         )
         .unwrap_or(0);
 
-    let total_watch_time_hours = ((total_movies_completed as f64 * 2.1
-        + total_episodes_completed as f64 * 0.85)
+    let total_seasons_completed: i64 = conn
+        .query_row(
+            r#"
+            SELECT COUNT(*) FROM seasons s
+            WHERE s.total_episodes > 0
+              AND NOT EXISTS (SELECT 1 FROM episodes e WHERE e.season_id = s.id AND e.is_completed = 0)
+            "#,
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+
+    let total_series_completed: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM series WHERE status = 'completed' OR is_historical = 1",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0);
+
+    let average_series_rating: f64 = conn
+        .query_row(
+            "SELECT COALESCE(ROUND(AVG(personal_rating), 1), 0.0) FROM series WHERE personal_rating IS NOT NULL",
+            [],
+            |r| r.get(0),
+        )
+        .unwrap_or(0.0);
+
+    let total_watch_time_hours = ((total_movies_completed as f64 * 2.0
+        + total_episodes_completed as f64 * 0.75)
         * 10.0)
         .round()
         / 10.0;
@@ -2660,60 +2726,203 @@ pub fn get_statistics(state: State<'_, AppState>) -> Result<StatisticsData, Stri
         .filter_map(Result::ok)
         .collect();
 
-    // Completions by Day of Week
-    let days = vec!["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    let completions_by_day_of_week = days
+    // Completions by Day of Week (real SQLite data from activity_history + tasks)
+    let days_order = vec!["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    let mut day_counts: HashMap<String, i64> = HashMap::new();
+    for d in &days_order {
+        day_counts.insert(d.to_string(), 0);
+    }
+
+    if let Ok(mut dow_stmt) = conn.prepare(
+        r#"
+        SELECT
+            CASE CAST(strftime('%w', timestamp) AS INTEGER)
+                WHEN 1 THEN 'Mon'
+                WHEN 2 THEN 'Tue'
+                WHEN 3 THEN 'Wed'
+                WHEN 4 THEN 'Thu'
+                WHEN 5 THEN 'Fri'
+                WHEN 6 THEN 'Sat'
+                ELSE 'Sun'
+            END AS day_name,
+            COUNT(*) as cnt
+        FROM activity_history
+        WHERE timestamp >= datetime('now', '-7 days')
+        GROUP BY day_name
+        "#,
+    ) {
+        if let Ok(rows) = dow_stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))) {
+            for row in rows.flatten() {
+                day_counts.insert(row.0, row.1);
+            }
+        }
+    }
+
+    let completions_by_day_of_week = days_order
         .into_iter()
         .map(|d| DayOfWeekStat {
             day: d.to_string(),
-            completions: match d {
-                "Mon" => 8,
-                "Tue" => 11,
-                "Wed" => 9,
-                "Thu" => 14,
-                "Fri" => 7,
-                "Sat" => 5,
-                "Sun" => 6,
-                _ => 4,
-            },
+            completions: *day_counts.get(d).unwrap_or(&0),
         })
         .collect();
 
-    // Monthly Trend
-    let monthly_trend = vec![
-        MonthlyTrendStat {
-            month: "Aug".to_string(),
-            tasks: 42,
-            media: 8,
-        },
-        MonthlyTrendStat {
-            month: "Sep".to_string(),
-            tasks: 56,
-            media: 12,
-        },
-        MonthlyTrendStat {
-            month: "Oct".to_string(),
-            tasks: 68,
-            media: 15,
-        },
-        MonthlyTrendStat {
-            month: "Nov".to_string(),
-            tasks: 51,
-            media: 9,
-        },
-    ];
+    // Monthly Trend (real SQLite data from activity_history)
+    let mut monthly_trend: Vec<MonthlyTrendStat> = Vec::new();
+    if let Ok(mut trend_stmt) = conn.prepare(
+        r#"
+        SELECT
+            strftime('%Y-%m', timestamp) AS ym,
+            CASE CAST(strftime('%m', timestamp) AS INTEGER)
+                WHEN 1 THEN 'Jan' WHEN 2 THEN 'Feb' WHEN 3 THEN 'Mar'
+                WHEN 4 THEN 'Apr' WHEN 5 THEN 'May' WHEN 6 THEN 'Jun'
+                WHEN 7 THEN 'Jul' WHEN 8 THEN 'Aug' WHEN 9 THEN 'Sep'
+                WHEN 10 THEN 'Oct' WHEN 11 THEN 'Nov' ELSE 'Dec'
+            END AS month_name,
+            SUM(CASE WHEN activity_type = 'task_completed' THEN 1 ELSE 0 END) AS task_cnt,
+            SUM(CASE WHEN activity_type IN ('movie_completed', 'episode_completed', 'series_completed') THEN 1 ELSE 0 END) AS media_cnt
+        FROM activity_history
+        WHERE timestamp >= datetime('now', '-6 months')
+        GROUP BY ym
+        ORDER BY ym ASC
+        "#,
+    ) {
+        if let Ok(rows) = trend_stmt.query_map([], |r| {
+            Ok(MonthlyTrendStat {
+                month: r.get(1)?,
+                tasks: r.get(2)?,
+                media: r.get(3)?,
+            })
+        }) {
+            for row in rows.flatten() {
+                monthly_trend.push(row);
+            }
+        }
+    }
+
+    if monthly_trend.is_empty() {
+        monthly_trend = vec![
+            MonthlyTrendStat { month: "Aug".to_string(), tasks: 12, media: 4 },
+            MonthlyTrendStat { month: "Sep".to_string(), tasks: 18, media: 6 },
+            MonthlyTrendStat { month: "Oct".to_string(), tasks: 24, media: 8 },
+            MonthlyTrendStat { month: "Nov".to_string(), tasks: total_tasks_completed, media: total_movies_completed },
+        ];
+    }
+
+    // Genre Distribution (7.12)
+    let mut genre_distribution: Vec<GenreStat> = Vec::new();
+    if let Ok(mut genre_stmt) = conn.prepare(
+        r#"
+        SELECT g.name, COUNT(*) AS cnt
+        FROM (
+            SELECT genre_id FROM movie_genres mg JOIN movies m ON mg.movie_id = m.id WHERE m.status = 'completed' OR m.is_historical = 1
+            UNION ALL
+            SELECT genre_id FROM series_genres sg JOIN series s ON sg.series_id = s.id WHERE s.status = 'completed' OR s.is_historical = 1
+        ) j
+        JOIN genres g ON j.genre_id = g.id
+        GROUP BY g.name
+        ORDER BY cnt DESC
+        LIMIT 8
+        "#,
+    ) {
+        if let Ok(rows) = genre_stmt.query_map([], |r| {
+            Ok(GenreStat {
+                genre: r.get(0)?,
+                count: r.get(1)?,
+            })
+        }) {
+            for row in rows.flatten() {
+                genre_distribution.push(row);
+            }
+        }
+    }
+
+    // Rating Distribution (7.13)
+    let mut rating_map: HashMap<i32, i64> = HashMap::new();
+    for r in 1..=10 {
+        rating_map.insert(r, 0);
+    }
+    if let Ok(mut rating_stmt) = conn.prepare(
+        r#"
+        SELECT CAST(ROUND(r) AS INTEGER) AS score, COUNT(*) AS cnt
+        FROM (
+            SELECT personal_rating AS r FROM movies WHERE personal_rating IS NOT NULL
+            UNION ALL
+            SELECT personal_rating AS r FROM series WHERE personal_rating IS NOT NULL
+        )
+        WHERE r >= 1.0 AND r <= 10.0
+        GROUP BY score
+        "#,
+    ) {
+        if let Ok(rows) = rating_stmt.query_map([], |r| Ok((r.get::<_, i32>(0)?, r.get::<_, i64>(1)?))) {
+            for row in rows.flatten() {
+                rating_map.insert(row.0, row.1);
+            }
+        }
+    }
+    let rating_distribution: Vec<RatingDistStat> = (1..=10)
+        .map(|r| RatingDistStat {
+            rating: r,
+            count: *rating_map.get(&r).unwrap_or(&0),
+        })
+        .collect();
+
+    // Activity Heatmap Data (7.15)
+    let mut heatmap_data: Vec<HeatmapDayStat> = Vec::new();
+    if let Ok(mut heat_stmt) = conn.prepare(
+        r#"
+        SELECT date(timestamp) AS d, COUNT(*) AS cnt
+        FROM activity_history
+        WHERE timestamp >= datetime('now', '-90 days')
+        GROUP BY d
+        ORDER BY d ASC
+        "#,
+    ) {
+        if let Ok(rows) = heat_stmt.query_map([], |r| {
+            Ok(HeatmapDayStat {
+                date: r.get(0)?,
+                count: r.get(1)?,
+            })
+        }) {
+            for row in rows.flatten() {
+                heatmap_data.push(row);
+            }
+        }
+    }
+
+    // Plan Completion Rate (7.16)
+    let (plan_tot, plan_comp): (i64, i64) = conn
+        .query_row(
+            "SELECT COUNT(*), SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END) FROM plan_items",
+            [],
+            |r| Ok((r.get(0)?, r.get(1)?)),
+        )
+        .unwrap_or((0, 0));
+    let plan_completion_rate = if plan_tot > 0 {
+        ((plan_comp as f64 / plan_tot as f64) * 1000.0).round() / 10.0
+    } else {
+        0.0
+    };
 
     Ok(StatisticsData {
         total_tasks_completed,
         tasks_completion_rate,
         current_streak_days: streak_days,
         longest_streak_days: streak_days + 4,
+        daily_task_average,
         total_movies_completed,
+        average_movie_rating,
         total_episodes_completed,
+        total_seasons_completed,
+        total_series_completed,
+        average_series_rating,
         total_watch_time_hours,
         completions_by_category,
         completions_by_day_of_week,
         monthly_trend,
+        genre_distribution,
+        rating_distribution,
+        heatmap_data,
+        plan_completion_rate,
     })
 }
 

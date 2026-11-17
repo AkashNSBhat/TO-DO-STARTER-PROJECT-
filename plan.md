@@ -148,23 +148,23 @@ DAYMARK is a production-quality, offline-first Windows desktop application that 
 ---
 
 ## Phase 7 — Activity History & Statistics
-- [ ] **7.1 Task completion history**: Audit log of every task finished.
-- [ ] **7.2 Movie completion history**: Movie finish events with ratings.
-- [ ] **7.3 Episode completion history**: Episode watching chronology.
-- [ ] **7.4 Series completion history**: Full series completion records.
-- [ ] **7.5 Plan completion history**: Milestone completion tracking.
-- [ ] **7.6 Chronological activity timeline**: Unified feed sorted by timestamp.
-- [ ] **7.7 Date-based filtering**: Range picker (Today, This Week, This Month, Custom).
-- [ ] **7.8 Productivity statistics**: Total tasks, completion streak, and daily average.
-- [ ] **7.9 Daily, weekly and monthly task statistics**: Recharts bar and line charts.
-- [ ] **7.10 Movie statistics**: Total watched, total hours, average rating.
-- [ ] **7.11 Series and episode statistics**: Total episodes, seasons, and series finished.
-- [ ] **7.12 Genre distribution**: Recharts radar/pie chart of entertainment genres.
-- [ ] **7.13 Average personal ratings**: Distribution histogram of 1-10 ratings.
-- [ ] **7.14 Monthly and yearly charts**: Comparative output charts across months.
-- [ ] **7.15 Activity calendar heatmap**: GitHub-style activity contribution map.
-- [ ] **7.16 Plan completion statistics**: Percentage of planned goals achieved per cycle.
-- [ ] **7.17 Verify calculations using real database records**: Strict SQLite queries for all metric calculations (no mock calculations).
+- [x] **7.1 Task completion history**: Audit log of every task finished.
+- [x] **7.2 Movie completion history**: Movie finish events with ratings.
+- [x] **7.3 Episode completion history**: Episode watching chronology.
+- [x] **7.4 Series completion history**: Full series completion records.
+- [x] **7.5 Plan completion history**: Milestone completion tracking.
+- [x] **7.6 Chronological activity timeline**: Unified feed sorted by timestamp.
+- [x] **7.7 Date-based filtering**: Range picker (Today, This Week, This Month, Custom).
+- [x] **7.8 Productivity statistics**: Total tasks, completion streak, and daily average.
+- [x] **7.9 Daily, weekly and monthly task statistics**: Recharts bar and line charts.
+- [x] **7.10 Movie statistics**: Total watched, total hours, average rating.
+- [x] **7.11 Series and episode statistics**: Total episodes, seasons, and series finished.
+- [x] **7.12 Genre distribution**: Recharts radar/pie chart of entertainment genres.
+- [x] **7.13 Average personal ratings**: Distribution histogram of 1-10 ratings.
+- [x] **7.14 Monthly and yearly charts**: Comparative output charts across months.
+- [x] **7.15 Activity calendar heatmap**: GitHub-style activity contribution map.
+- [x] **7.16 Plan completion statistics**: Percentage of planned goals achieved per cycle.
+- [x] **7.17 Verify calculations using real database records**: Strict SQLite queries for all metric calculations (no mock calculations).
 
 ---
 

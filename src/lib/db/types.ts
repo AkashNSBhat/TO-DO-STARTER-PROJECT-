@@ -390,17 +390,41 @@ export interface MonthlyTrendStat {
   media: number;
 }
 
+export interface GenreStat {
+  genre: string;
+  count: number;
+}
+
+export interface RatingDistStat {
+  rating: number;
+  count: number;
+}
+
+export interface HeatmapDayStat {
+  date: string;
+  count: number;
+}
+
 export interface StatisticsData {
   totalTasksCompleted: number;
   tasksCompletionRate: number;
   currentStreakDays: number;
   longestStreakDays: number;
+  dailyTaskAverage: number;
   totalMoviesCompleted: number;
+  averageMovieRating: number;
   totalEpisodesCompleted: number;
+  totalSeasonsCompleted: number;
+  totalSeriesCompleted: number;
+  averageSeriesRating: number;
   totalWatchTimeHours: number;
   completionsByCategory: CategoryStat[];
   completionsByDayOfWeek: DayOfWeekStat[];
   monthlyTrend: MonthlyTrendStat[];
+  genreDistribution: GenreStat[];
+  ratingDistribution: RatingDistStat[];
+  heatmapData: HeatmapDayStat[];
+  planCompletionRate: number;
 }
 
 // -------------------------------------------------------------

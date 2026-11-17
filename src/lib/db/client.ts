@@ -1128,11 +1128,30 @@ export class DatabaseClient {
   // Activity History & Statistics
   // =============================================================
 
-  static async getActivityHistory(limit: number = 50): Promise<ActivityHistoryItem[]> {
+  static async getActivityHistory(
+    activityType: string = "all",
+    dateFilter: string = "all",
+    limit: number = 50
+  ): Promise<ActivityHistoryItem[]> {
     if (!this.isTauri()) {
-      return this.localData.activityHistory.slice(0, limit);
+      let list = [...this.localData.activityHistory];
+      if (activityType !== "all") {
+        list = list.filter((a: ActivityHistoryItem) => a.activityType.startsWith(activityType));
+      }
+      if (dateFilter === "today") {
+        list = list.filter((a: ActivityHistoryItem) => a.timestamp.startsWith("2026-11-16"));
+      } else if (dateFilter === "week") {
+        list = list.filter((a: ActivityHistoryItem) => a.timestamp >= "2026-11-09");
+      } else if (dateFilter === "month") {
+        list = list.filter((a: ActivityHistoryItem) => a.timestamp >= "2026-10-16");
+      }
+      return list.slice(0, limit);
     }
-    return await invoke<ActivityHistoryItem[]>("get_activity_history", { limit });
+    return await invoke<ActivityHistoryItem[]>("get_activity_history", {
+      activityType: activityType === "all" ? null : activityType,
+      dateFilter: dateFilter === "all" ? null : dateFilter,
+      limit,
+    });
   }
 
   static async getStatistics(): Promise<StatisticsData> {
