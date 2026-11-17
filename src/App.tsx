@@ -10,6 +10,7 @@ import { PlanPage } from "./pages/PlanPage";
 import { ActivityPage } from "./pages/ActivityPage";
 import { StatisticsPage } from "./pages/StatisticsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavTab>("dashboard");
@@ -41,7 +42,9 @@ export const App: React.FC = () => {
 
   return (
     <MainLayout currentTab={currentTab} onSelectTab={setCurrentTab}>
-      {renderContent()}
+      <ErrorBoundary onReset={() => setCurrentTab("dashboard")}>
+        {renderContent()}
+      </ErrorBoundary>
     </MainLayout>
   );
 };

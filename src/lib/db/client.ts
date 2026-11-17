@@ -32,6 +32,7 @@ import {
   ActivityHistoryItem,
   StatisticsData,
   AppSettings,
+  DatabaseBackupPayload,
 } from "./types";
 import { fallbackSeedData } from "./seedData";
 
@@ -1178,5 +1179,56 @@ export class DatabaseClient {
       return true;
     }
     return await invoke<boolean>("set_app_setting", { key, value });
+  }
+
+  // =============================================================
+  // Database Backup & Restore (Phase 8)
+  // =============================================================
+
+  static async exportBackup(): Promise<string> {
+    if (!this.isTauri()) {
+      const payload: DatabaseBackupPayload = {
+        app: "DAYMARK",
+        version: "0.1.0",
+        exportDate: new Date().toISOString(),
+        tableCounts: {
+          tasks: this.localData.tasks.length,
+          movies: this.localData.movies.length,
+          series: this.localData.series.length,
+          planItems: this.localData.planItems.length,
+          activityHistory: this.localData.activityHistory.length,
+        },
+        tables: {
+          tasks: this.localData.tasks,
+          movies: this.localData.movies,
+          series: this.localData.series,
+          plan_items: this.localData.planItems,
+          activity_history: this.localData.activityHistory,
+          app_settings: [this.localData.appSettings],
+        },
+      };
+      return JSON.stringify(payload, null, 2);
+    }
+    return await invoke<string>("export_database_backup");
+  }
+
+  static async restoreBackup(backupJson: string): Promise<boolean> {
+    if (!this.isTauri()) {
+      try {
+        const payload: DatabaseBackupPayload = JSON.parse(backupJson);
+        if (payload.app !== "DAYMARK") {
+          throw new Error("Invalid backup: app mismatch");
+        }
+        if (payload.tables.tasks) this.localData.tasks = payload.tables.tasks;
+        if (payload.tables.movies) this.localData.movies = payload.tables.movies;
+        if (payload.tables.series) this.localData.series = payload.tables.series;
+        if (payload.tables.plan_items) this.localData.planItems = payload.tables.plan_items;
+        if (payload.tables.activity_history) this.localData.activityHistory = payload.tables.activity_history;
+        return true;
+      } catch (e) {
+        throw new Error(e instanceof Error ? e.message : "Failed to restore backup");
+      }
+    }
+    return await invoke<boolean>("restore_database_backup", { backupJson });
   }
 }

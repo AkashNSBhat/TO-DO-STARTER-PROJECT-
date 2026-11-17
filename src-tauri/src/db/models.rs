@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // =============================================================
 // Diagnostics & System Telemetry (Phase 0 Compatibility)
@@ -601,3 +602,18 @@ pub struct StatisticsData {
     pub heatmap_data: Vec<HeatmapDayStat>,
     pub plan_completion_rate: f64,
 }
+
+// =============================================================
+// Backup & Restore Models (Phase 8)
+// =============================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatabaseBackupPayload {
+    pub app: String,
+    pub version: String,
+    pub export_date: String,
+    pub table_counts: HashMap<String, usize>,
+    pub tables: HashMap<String, Vec<serde_json::Value>>,
+}
+

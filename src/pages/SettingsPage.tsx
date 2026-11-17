@@ -7,6 +7,7 @@ import {
   Moon,
   Download,
   Upload,
+  RotateCcw,
   CheckCircle2,
   ShieldCheck,
   User,
@@ -19,6 +20,7 @@ import { useDatabase } from "../hooks/useDatabase";
 import { useAppInfo } from "../hooks/useAppInfo";
 import { useSettings } from "../hooks/useSettings";
 import { useTheme } from "../hooks/useTheme";
+import { DatabaseClient } from "../lib/db/client";
 import { cn } from "../lib/utils";
 
 export const SettingsPage: React.FC = () => {
@@ -35,6 +37,11 @@ export const SettingsPage: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isBackupModalOpen, setIsBackupModalOpen] = useState(false);
   const [isRestoreModalOpen, setIsRestoreModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [restoreContent, setRestoreContent] = useState<string | null>(null);
+  const [restoreSuccess, setRestoreSuccess] = useState(false);
+  const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,29 +51,64 @@ export const SettingsPage: React.FC = () => {
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
-  const handleExportBackup = () => {
-    // Generate JSON blob for database backup
-    const backupData = {
-      app: "DAYMARK",
-      version: appInfo?.version || "0.1.0",
-      exportDate: new Date().toISOString(),
-      databasePath: dbStatus?.path,
-      stats: dbStatus?.table_stats,
-    };
+  const handleExportBackup = async () => {
+    try {
+      setIsExporting(true);
+      const jsonBackup = await DatabaseClient.exportBackup();
+      const blob = new Blob([jsonBackup], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const downloadAnchor = document.createElement("a");
+      downloadAnchor.href = url;
+      downloadAnchor.download = `daymark-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      URL.revokeObjectURL(url);
+      setIsBackupModalOpen(false);
+    } catch (err) {
+      console.error("Export backup error:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
-    const dataStr =
-      "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(backupData, null, 2));
-    const downloadAnchor = document.createElement("a");
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute(
-      "download",
-      `daymark-backup-${new Date().toISOString().slice(0, 10)}.json`
-    );
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
-    setIsBackupModalOpen(false);
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreError(null);
+    setRestoreSuccess(false);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsed = JSON.parse(text);
+        if (parsed.app !== "DAYMARK") {
+          setRestoreError("The selected file is not a valid DAYMARK database snapshot.");
+          return;
+        }
+        setRestoreContent(text);
+      } catch {
+        setRestoreError("Failed to parse JSON backup file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!restoreContent) return;
+    try {
+      setIsRestoring(true);
+      setRestoreError(null);
+      await DatabaseClient.restoreBackup(restoreContent);
+      setRestoreSuccess(true);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      setRestoreError(err instanceof Error ? err.message : "Failed to restore database backup.");
+    } finally {
+      setIsRestoring(false);
+    }
   };
 
   return (
@@ -345,9 +387,10 @@ export const SettingsPage: React.FC = () => {
               variant="primary"
               size="sm"
               onClick={handleExportBackup}
+              disabled={isExporting}
               icon={<Download className="w-3.5 h-3.5" />}
             >
-              Download Backup JSON
+              {isExporting ? "Exporting..." : "Download Backup JSON"}
             </Button>
           </div>
         }
@@ -360,18 +403,39 @@ export const SettingsPage: React.FC = () => {
       {/* Restore Confirmation Modal */}
       <Modal
         isOpen={isRestoreModalOpen}
-        onClose={() => setIsRestoreModalOpen(false)}
+        onClose={() => {
+          setIsRestoreModalOpen(false);
+          setRestoreContent(null);
+          setRestoreError(null);
+          setRestoreSuccess(false);
+        }}
         title="Restore Database Backup"
         description="Import records from a previous DAYMARK backup file."
         size="sm"
         footer={
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsRestoreModalOpen(false)}
-          >
-            Close
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setIsRestoreModalOpen(false);
+                setRestoreContent(null);
+                setRestoreError(null);
+                setRestoreSuccess(false);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleExecuteRestore}
+              disabled={!restoreContent || isRestoring}
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
+            >
+              {isRestoring ? "Restoring..." : "Restore Snapshot"}
+            </Button>
+          </div>
         }
       >
         <div className="space-y-3">
@@ -381,8 +445,27 @@ export const SettingsPage: React.FC = () => {
           <input
             type="file"
             accept=".json"
+            onChange={handleFileSelect}
             className="w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-500/10 file:text-teal-400 hover:file:bg-teal-500/20 cursor-pointer"
           />
+
+          {restoreContent && !restoreError && (
+            <div className="p-2.5 rounded-lg bg-teal-500/10 border border-teal-500/20 text-xs text-teal-400">
+              Valid DAYMARK backup ready for restore.
+            </div>
+          )}
+
+          {restoreError && (
+            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400">
+              {restoreError}
+            </div>
+          )}
+
+          {restoreSuccess && (
+            <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
+              Database restored successfully! Reloading workspace...
+            </div>
+          )}
         </div>
       </Modal>
     </div>

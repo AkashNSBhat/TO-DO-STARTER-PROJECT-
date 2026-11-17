@@ -16,6 +16,7 @@ import type {
   AppSettings,
   DbStatusResponse,
   AppInfoResponse,
+  DatabaseBackupPayload,
 } from "../../src/lib/db/types";
 
 // =============================================================
@@ -619,6 +620,7 @@ const INITIAL_STATISTICS: StatisticsData = {
 let activeAppSettings = JSON.parse(JSON.stringify(INITIAL_APP_SETTINGS));
 let activeDashboard = JSON.parse(JSON.stringify(INITIAL_DASHBOARD));
 let activeTasks: TaskDetail[] = JSON.parse(JSON.stringify(INITIAL_TASKS));
+let activeSubtasks: any[] = [];
 let activeMovies: MovieDetail[] = JSON.parse(JSON.stringify(INITIAL_MOVIES));
 let activeSeries: SeriesDetail[] = JSON.parse(JSON.stringify(INITIAL_SERIES));
 let activeSeriesDetails: Record<string, SeriesFull> = JSON.parse(JSON.stringify(INITIAL_SERIES_DETAILS));
@@ -634,6 +636,7 @@ export function resetMockDb() {
   activeAppSettings = JSON.parse(JSON.stringify(INITIAL_APP_SETTINGS));
   activeDashboard = JSON.parse(JSON.stringify(INITIAL_DASHBOARD));
   activeTasks = JSON.parse(JSON.stringify(INITIAL_TASKS));
+  activeSubtasks = [];
   activeMovies = JSON.parse(JSON.stringify(INITIAL_MOVIES));
   activeSeries = JSON.parse(JSON.stringify(INITIAL_SERIES));
   activeSeriesDetails = JSON.parse(JSON.stringify(INITIAL_SERIES_DETAILS));
@@ -1577,6 +1580,51 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
 
     case "get_statistics": {
       return JSON.parse(JSON.stringify(activeStatistics));
+    }
+
+    // -------------------------------------------------------------
+    // Backup & Restore (Phase 8)
+    // -------------------------------------------------------------
+    case "export_database_backup": {
+      const payload: DatabaseBackupPayload = {
+        app: "DAYMARK",
+        version: "0.1.0",
+        exportDate: "2026-11-17T12:00:00Z",
+        tableCounts: {
+          tasks: activeTasks.length,
+          subtasks: activeSubtasks.length,
+          movies: activeMovies.length,
+          series: activeSeries.length,
+          planItems: activePlanItems.length,
+          activityHistory: activeActivityHistory.length,
+        },
+        tables: {
+          tasks: activeTasks,
+          subtasks: activeSubtasks,
+          movies: activeMovies,
+          series: activeSeries,
+          plan_items: activePlanItems,
+          activity_history: activeActivityHistory,
+        },
+      };
+      return JSON.stringify(payload, null, 2);
+    }
+
+    case "restore_database_backup": {
+      const backupJson = args.backupJson || args.backup_json;
+      if (!backupJson) {
+        throw new Error("Missing backupJson");
+      }
+      const payload: DatabaseBackupPayload = JSON.parse(backupJson);
+      if (payload.app !== "DAYMARK") {
+        throw new Error("Invalid backup: app mismatch");
+      }
+      if (payload.tables.tasks) activeTasks = JSON.parse(JSON.stringify(payload.tables.tasks));
+      if (payload.tables.movies) activeMovies = JSON.parse(JSON.stringify(payload.tables.movies));
+      if (payload.tables.series) activeSeries = JSON.parse(JSON.stringify(payload.tables.series));
+      if (payload.tables.plan_items) activePlanItems = JSON.parse(JSON.stringify(payload.tables.plan_items));
+      if (payload.tables.activity_history) activeActivityHistory = JSON.parse(JSON.stringify(payload.tables.activity_history));
+      return true;
     }
 
     default:

@@ -82,6 +82,8 @@ pub fn run() {
             commands::db::get_statistics,
             commands::db::get_app_settings,
             commands::db::set_app_setting,
+            commands::db::export_database_backup,
+            commands::db::restore_database_backup,
         ])
         .run(tauri::generate_context!())
         .expect("error while running DAYMARK desktop application");

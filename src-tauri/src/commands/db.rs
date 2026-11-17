@@ -2967,3 +2967,220 @@ pub fn set_app_setting(
 
     Ok(true)
 }
+
+// =============================================================
+// Backup & Restore Handlers (Phase 8)
+// =============================================================
+
+#[tauri::command]
+pub fn export_database_backup(state: State<'_, AppState>) -> Result<String, String> {
+    let conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let table_names = [
+        "app_settings",
+        "genres",
+        "task_categories",
+        "tasks",
+        "subtasks",
+        "daily_goals",
+        "movies",
+        "movie_genres",
+        "series",
+        "seasons",
+        "episodes",
+        "series_genres",
+        "plan_items",
+        "activity_history",
+    ];
+
+    let mut tables = HashMap::new();
+    let mut table_counts = HashMap::new();
+
+    for table in &table_names {
+        let mut col_stmt = conn
+            .prepare(&format!("PRAGMA table_info({})", table))
+            .map_err(|e| format!("Failed to inspect table {}: {}", table, e))?;
+
+        let col_names: Vec<String> = col_stmt
+            .query_map([], |r| r.get(1))
+            .map_err(|e| format!("Failed to read columns for {}: {}", table, e))?
+            .filter_map(Result::ok)
+            .collect();
+
+        let mut stmt = conn
+            .prepare(&format!("SELECT * FROM {}", table))
+            .map_err(|e| format!("Failed to query table {}: {}", table, e))?;
+
+        let mut rows: Vec<serde_json::Value> = Vec::new();
+        let mut row_iter = stmt
+            .query([])
+            .map_err(|e| format!("Failed to read rows from {}: {}", table, e))?;
+
+        while let Some(row) = row_iter
+            .next()
+            .map_err(|e| format!("Error advancing row in {}: {}", table, e))?
+        {
+            let mut obj = serde_json::Map::new();
+            for (idx, col) in col_names.iter().enumerate() {
+                let val_ref = row
+                    .get_ref(idx)
+                    .map_err(|e| format!("Error getting column {}: {}", col, e))?;
+
+                let json_val = match val_ref {
+                    rusqlite::types::ValueRef::Null => serde_json::Value::Null,
+                    rusqlite::types::ValueRef::Integer(i) => serde_json::json!(i),
+                    rusqlite::types::ValueRef::Real(f) => serde_json::json!(f),
+                    rusqlite::types::ValueRef::Text(t) => {
+                        let s = String::from_utf8_lossy(t);
+                        serde_json::json!(s.as_ref())
+                    }
+                    rusqlite::types::ValueRef::Blob(b) => {
+                        let s = String::from_utf8_lossy(b);
+                        serde_json::json!(s.as_ref())
+                    }
+                };
+                obj.insert(col.clone(), json_val);
+            }
+            rows.push(serde_json::Value::Object(obj));
+        }
+
+        table_counts.insert(table.to_string(), rows.len());
+        tables.insert(table.to_string(), rows);
+    }
+
+    let payload = DatabaseBackupPayload {
+        app: "DAYMARK".to_string(),
+        version: "0.1.0".to_string(),
+        export_date: Utc::now().to_rfc3339(),
+        table_counts,
+        tables,
+    };
+
+    serde_json::to_string_pretty(&payload).map_err(|e| format!("Serialization error: {}", e))
+}
+
+#[tauri::command]
+pub fn restore_database_backup(
+    state: State<'_, AppState>,
+    backup_json: String,
+) -> Result<bool, String> {
+    let payload: DatabaseBackupPayload = serde_json::from_str(&backup_json)
+        .map_err(|e| format!("Invalid backup file format: {}", e))?;
+
+    if payload.app != "DAYMARK" {
+        return Err("Invalid backup: file does not match DAYMARK schema".to_string());
+    }
+
+    let mut conn = state
+        .db
+        .lock()
+        .map_err(|e| format!("Database lock error: {}", e))?;
+
+    let tx = conn
+        .transaction()
+        .map_err(|e| format!("Failed to open transaction: {}", e))?;
+
+    // Clear existing data in reverse topological order
+    let tables_to_clear = [
+        "activity_history",
+        "plan_items",
+        "episodes",
+        "seasons",
+        "series_genres",
+        "series",
+        "movie_genres",
+        "movies",
+        "daily_goals",
+        "subtasks",
+        "tasks",
+        "task_categories",
+        "genres",
+        "app_settings",
+    ];
+
+    for table in &tables_to_clear {
+        tx.execute(&format!("DELETE FROM {}", table), [])
+            .map_err(|e| format!("Failed to clear table {}: {}", table, e))?;
+    }
+
+    // Restore tables in forward dependency order
+    let tables_to_restore = [
+        "app_settings",
+        "genres",
+        "task_categories",
+        "tasks",
+        "subtasks",
+        "daily_goals",
+        "movies",
+        "movie_genres",
+        "series",
+        "seasons",
+        "episodes",
+        "series_genres",
+        "plan_items",
+        "activity_history",
+    ];
+
+    for table in &tables_to_restore {
+        if let Some(rows) = payload.tables.get(*table) {
+            for row_val in rows {
+                if let Some(obj) = row_val.as_object() {
+                    if obj.is_empty() {
+                        continue;
+                    }
+                    let cols: Vec<String> = obj.keys().cloned().collect();
+                    let placeholders: Vec<String> =
+                        (1..=cols.len()).map(|i| format!("?{}", i)).collect();
+                    let sql = format!(
+                        "INSERT INTO {} ({}) VALUES ({})",
+                        table,
+                        cols.join(", "),
+                        placeholders.join(", ")
+                    );
+
+                    let mut params: Vec<Box<dyn rusqlite::types::ToSql>> = Vec::new();
+                    for col in &cols {
+                        match &obj[col] {
+                            serde_json::Value::Null => {
+                                params.push(Box::new(rusqlite::types::Null))
+                            }
+                            serde_json::Value::Bool(b) => {
+                                params.push(Box::new(if *b { 1 } else { 0 }))
+                            }
+                            serde_json::Value::Number(n) => {
+                                if let Some(i) = n.as_i64() {
+                                    params.push(Box::new(i));
+                                } else if let Some(f) = n.as_f64() {
+                                    params.push(Box::new(f));
+                                } else {
+                                    params.push(Box::new(n.to_string()));
+                                }
+                            }
+                            serde_json::Value::String(s) => params.push(Box::new(s.clone())),
+                            _ => params.push(Box::new(obj[col].to_string())),
+                        }
+                    }
+
+                    let params_ref: Vec<&dyn rusqlite::types::ToSql> =
+                        params.iter().map(|p| p.as_ref()).collect();
+                    tx.execute(&sql, params_ref.as_slice())
+                        .map_err(|e| format!("Failed to insert into {}: {}", table, e))?;
+                }
+            }
+        }
+    }
+
+    let audit_id = uuid::Uuid::new_v4().to_string();
+    let _ = tx.execute(
+        "INSERT INTO activity_history (id, activity_type, entity_type, entity_id, title, timestamp) VALUES (?1, 'backup_restored', 'system', 'backup', 'Restored offline database snapshot', datetime('now'))",
+        rusqlite::params![audit_id],
+    );
+
+    tx.commit()
+        .map_err(|e| format!("Failed to commit restore transaction: {}", e))?;
+
+    Ok(true)
+}

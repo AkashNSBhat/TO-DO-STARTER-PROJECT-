@@ -535,3 +535,12 @@ export interface Genre {
   name: string;
   created_at: string;
 }
+
+export interface DatabaseBackupPayload {
+  app: string;
+  version: string;
+  exportDate: string;
+  tableCounts: Record<string, number>;
+  tables: Record<string, Record<string, any>[]>;
+}
+
