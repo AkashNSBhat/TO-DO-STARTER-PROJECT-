@@ -11,12 +11,11 @@ import {
   X,
   CheckCircle2,
   Circle,
-  Clock,
+  MoreHorizontal,
 } from "lucide-react";
 import { TaskDetail, Priority, SubtaskDetail } from "../../lib/db/types";
 import { Badge } from "../common/Badge";
 import { CircularCheckbox } from "./CircularCheckbox";
-import { ProgressBar } from "../common/ProgressBar";
 import { DatabaseClient } from "../../lib/db/client";
 import { cn } from "../../lib/utils";
 
@@ -40,6 +39,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const [subtasks, setSubtasks] = useState<SubtaskDetail[]>([]);
   const [loadingSubtasks, setLoadingSubtasks] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [showMenu, setShowMenu] = useState(false);
 
   const loadSubtasks = async () => {
     try {
@@ -58,7 +58,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   }, [isExpanded, task.id]);
 
   const handleToggleSubtask = async (subtaskId: string, isCompleted: boolean) => {
-    // Optimistic update
     setSubtasks((prev) =>
       prev.map((s) =>
         s.id === subtaskId
@@ -86,12 +85,23 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     await DatabaseClient.deleteSubtask(subtaskId);
   };
 
-  const subtaskProgress =
-    subtasks.length > 0
-      ? Math.round(
-          (subtasks.filter((s) => s.isCompleted).length / subtasks.length) * 100
-        )
-      : 0;
+  // Progress metrics
+  const totalSubtasks = task.subtasksCount || subtasks.length || 0;
+  const completedSubtasks = task.completedSubtasksCount || subtasks.filter((s) => s.isCompleted).length || 0;
+  
+  // Fractional display (e.g. 7/10 or 4/10 as seen in Figma screenshot)
+  const progressRatioText =
+    totalSubtasks > 0
+      ? `${completedSubtasks}/${totalSubtasks}`
+      : task.isCompleted
+      ? "10/10"
+      : "0/1";
+
+  const progressPercent = task.isCompleted
+    ? 100
+    : totalSubtasks > 0
+    ? Math.round((completedSubtasks / totalSubtasks) * 100)
+    : 0;
 
   const renderPriorityBadge = (priority: Priority) => {
     switch (priority) {
@@ -124,7 +134,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             pill
             className="gap-1 font-semibold uppercase text-[10px] tracking-wider"
           >
-            <Flag className="w-2.5 h-2.5 text-teal-500" />
+            <Flag className="w-2.5 h-2.5 text-blue-500" />
             Medium
           </Badge>
         );
@@ -143,61 +153,31 @@ export const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  const renderDueDatePill = () => {
-    if (!task.dueDate) return null;
-
-    if (isOverdue) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20 select-none">
-          <Calendar className="w-3 h-3 text-rose-500" />
-          Overdue {task.dueDate}
-        </span>
-      );
-    }
-
-    if (isToday) {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20 select-none">
-          <Calendar className="w-3 h-3 text-teal-600 dark:text-teal-400" />
-          Today
-        </span>
-      );
-    }
-
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-charcoal-600 select-none">
-        <Calendar className="w-3 h-3 text-slate-400" />
-        {task.dueDate}
-      </span>
-    );
-  };
-
   return (
     <div
       className={cn(
-        "rounded-xl border transition-all duration-150 overflow-hidden",
+        "rounded-2xl border transition-all duration-200 overflow-hidden relative group",
         task.isCompleted
-          ? "bg-slate-50/70 dark:bg-charcoal-850/50 border-slate-200/60 dark:border-charcoal-700/60 opacity-65"
-          : "bg-white dark:bg-charcoal-800 border-slate-200 dark:border-charcoal-600 hover:border-slate-300 dark:hover:border-charcoal-500 shadow-xs"
+          ? "bg-slate-50/70 dark:bg-[#1a1c22]/60 border-slate-200/60 dark:border-[#282c35]/60 opacity-70"
+          : "bg-white dark:bg-[#21242b] border-slate-200/90 dark:border-[#2c3038] hover:border-blue-400/50 dark:hover:border-slate-700 shadow-sm hover:shadow-md"
       )}
     >
-      {/* Main Task Row */}
-      <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        {/* Left section: Checkbox, Title, Description */}
-        <div className="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
-          <div className="pt-0.5 sm:pt-0">
-            <CircularCheckbox
-              checked={task.isCompleted}
-              onToggle={(checked) => onToggle(task.id, checked)}
-              label={task.title}
-            />
-          </div>
+      <div className="p-4 space-y-3">
+        {/* Top Header: Title, Category/Project Subtitle, Menu */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="pt-0.5">
+              <CircularCheckbox
+                checked={task.isCompleted}
+                onToggle={(checked) => onToggle(task.id, checked)}
+                label={task.title}
+              />
+            </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
               <h4
                 className={cn(
-                  "text-sm font-semibold truncate transition-colors",
+                  "text-sm font-semibold truncate transition-colors tracking-tight",
                   task.isCompleted
                     ? "line-through text-slate-400 dark:text-slate-500"
                     : "text-slate-900 dark:text-slate-100"
@@ -205,109 +185,139 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               >
                 {task.title}
               </h4>
-              {task.isCompleted && task.completedAt && (
-                <span className="text-[10px] font-mono text-emerald-500 flex items-center gap-1">
-                  <Clock className="w-2.5 h-2.5" />
-                  {task.completedAt.slice(11, 16)}
-                </span>
-              )}
-            </div>
-
-            {task.description && (
-              <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                {task.description}
+              <p className="text-xs text-slate-400 dark:text-slate-400 truncate mt-0.5 font-medium">
+                {task.categoryName || "General Task"}
+                {task.description && ` • ${task.description}`}
               </p>
+            </div>
+          </div>
+
+          {/* Three dots menu button */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="More options"
+            >
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-white dark:bg-[#1a1c22] border border-slate-200 dark:border-[#2c3038] shadow-xl py-1 z-30 animate-fadeIn">
+                {onEdit && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onEdit(task);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                    Edit Task
+                  </button>
+                )}
+                {onDelete && (
+                  <button
+                    onClick={() => {
+                      setShowMenu(false);
+                      onDelete(task);
+                    }}
+                    className="w-full px-3 py-1.5 text-xs text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                    Delete
+                  </button>
+                )}
+              </div>
             )}
           </div>
         </div>
 
-        {/* Right section: Category, Priority, Due Date, Subtask Toggle, Actions */}
-        <div className="flex items-center flex-wrap gap-2 shrink-0 self-end sm:self-auto pl-8 sm:pl-0">
-          {/* Category Badge with Color Dot */}
-          <Badge variant="default" pill className="gap-1.5 font-medium text-xs">
-            {task.categoryColor && (
+        {/* ======================================================= */}
+        {/* The Signature Figma Progress Bar                        */}
+        {/* ======================================================= */}
+        <div className="space-y-1.5 pt-1">
+          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-400 font-medium">
+            <span className="flex items-center gap-1.5">
+              <ListTodo className="w-3.5 h-3.5 text-slate-400" />
+              <span>Progress</span>
+            </span>
+            <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
+              {progressRatioText}
+            </span>
+          </div>
+
+          {/* Progress Bar Track with Vibrant Orange or Green Fill */}
+          <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div
+              className={cn(
+                "h-full rounded-full transition-all duration-300",
+                task.isCompleted
+                  ? "bg-[#22c55e]" // Vibrant Neon Lime when done
+                  : "bg-[#ff783e]" // Warm Tangerine Orange when in progress
+              )}
+              style={{ width: `${Math.max(8, progressPercent)}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Footer Meta Row: Date Pill, Priority Flag, Subtasks Drawer Toggle */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          <div className="flex items-center gap-2">
+            {/* Date Pill (Figma style) */}
+            {task.dueDate && (
               <span
-                className="w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ backgroundColor: task.categoryColor }}
-              />
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border select-none",
+                  isOverdue
+                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20"
+                    : isToday
+                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20"
+                    : "bg-slate-50 dark:bg-[#1a1c22] text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-[#2c3038]"
+                )}
+              >
+                <Calendar className="w-3 h-3 text-slate-400" />
+                <span>{isToday ? "Today" : task.dueDate}</span>
+              </span>
             )}
-            <span>{task.categoryName}</span>
-          </Badge>
 
-          {/* Priority Badge */}
-          {renderPriorityBadge(task.priority)}
-
-          {/* Due Date Calendar Pill */}
-          {renderDueDatePill()}
+            {/* Priority flag */}
+            {renderPriorityBadge(task.priority)}
+          </div>
 
           {/* Subtask Count Pill / Expand Toggle */}
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className={cn(
-              "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono transition-colors cursor-pointer",
+              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
               isExpanded
-                ? "bg-teal-500/10 text-teal-400 border border-teal-500/20"
-                : "bg-slate-100 dark:bg-charcoal-700/60 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-charcoal-600 hover:text-teal-400"
+                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20"
+                : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
             )}
             title="Toggle Subtask Checklist"
           >
-            <ListTodo className="w-3 h-3" />
-            <span>
-              {task.completedSubtasksCount}/{task.subtasksCount}
-            </span>
+            <span>{totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : "Checklist"}</span>
             {isExpanded ? (
-              <ChevronUp className="w-3 h-3" />
+              <ChevronUp className="w-3.5 h-3.5" />
             ) : (
-              <ChevronDown className="w-3 h-3" />
+              <ChevronDown className="w-3.5 h-3.5" />
             )}
           </button>
-
-          {/* Quick Action Buttons */}
-          <div className="flex items-center gap-1 pl-1 border-l border-slate-200 dark:border-charcoal-700">
-            {onEdit && (
-              <button
-                type="button"
-                onClick={() => onEdit(task)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-charcoal-700 transition-colors cursor-pointer"
-                title="Edit Task"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-
-            {onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(task)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-slate-100 dark:hover:bg-charcoal-700 transition-colors cursor-pointer"
-                title="Delete Task"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
       {/* Subtasks Drawer */}
       {isExpanded && (
-        <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-charcoal-900/60 border-t border-slate-200/80 dark:border-charcoal-700/80 space-y-3 animate-fadeIn">
+        <div className="px-5 py-3.5 bg-slate-50/80 dark:bg-[#181a20] border-t border-slate-200/80 dark:border-[#282c35] space-y-3 animate-fadeIn">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Checklist Progress
+              Checklist Items
             </span>
-            <span className="text-[11px] font-mono text-teal-400 font-bold">
-              {subtaskProgress}%
+            <span className="text-[11px] font-mono text-blue-500 font-bold">
+              {progressPercent}%
             </span>
           </div>
-
-          <ProgressBar
-            value={subtaskProgress}
-            max={100}
-            variant="teal"
-            size="sm"
-          />
 
           {/* Subtasks list */}
           {loadingSubtasks ? (
@@ -317,7 +327,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               {subtasks.map((sub) => (
                 <div
                   key={sub.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200/80 dark:border-charcoal-700/60 text-xs"
+                  className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#21242b] border border-slate-200/80 dark:border-[#2c3038] text-xs"
                 >
                   <div className="flex items-center gap-2.5 min-w-0 flex-1">
                     <button
@@ -326,8 +336,8 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                       className={cn(
                         "w-4 h-4 rounded-full flex items-center justify-center shrink-0 cursor-pointer",
                         sub.isCompleted
-                          ? "text-emerald-400"
-                          : "text-slate-400 hover:text-teal-400"
+                          ? "text-emerald-500"
+                          : "text-slate-400 hover:text-blue-500"
                       )}
                     >
                       {sub.isCompleted ? (
@@ -341,7 +351,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                         "truncate",
                         sub.isCompleted
                           ? "line-through text-slate-400 dark:text-slate-500"
-                          : "text-slate-800 dark:text-slate-200"
+                          : "text-slate-800 dark:text-slate-200 font-medium"
                       )}
                     >
                       {sub.title}
@@ -367,12 +377,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               value={newSubtaskTitle}
               onChange={(e) => setNewSubtaskTitle(e.target.value)}
               placeholder="Add next checklist item..."
-              className="flex-1 text-xs py-1.5 px-3 rounded-lg bg-white dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="flex-1 text-xs py-1.5 px-3 rounded-xl bg-white dark:bg-[#21242b] border border-slate-200 dark:border-[#2c3038] text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <button
               type="submit"
               disabled={!newSubtaskTitle.trim()}
-              className="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-teal-500 text-charcoal-950 disabled:opacity-50 cursor-pointer"
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-50 cursor-pointer transition-colors shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>

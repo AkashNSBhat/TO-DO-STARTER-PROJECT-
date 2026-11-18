@@ -5,7 +5,7 @@ export interface ProgressBarProps {
   value: number;
   max?: number;
   label?: string;
-  variant?: "teal" | "emerald" | "violet" | "amber";
+  variant?: "teal" | "emerald" | "violet" | "amber" | "orange" | "blue";
   showPercent?: boolean;
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -29,10 +29,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   const fillVariants = {
-    teal: "bg-teal-500",
-    emerald: "bg-emerald-500",
-    violet: "bg-violet-500",
-    amber: "bg-amber-500",
+    teal: "bg-[#3b66ff]",
+    blue: "bg-[#3b66ff]",
+    orange: "bg-[#ff783e]",
+    emerald: "bg-[#22c55e]",
+    violet: "bg-[#6366f1]",
+    amber: "bg-[#f59e0b]",
   };
 
   return (

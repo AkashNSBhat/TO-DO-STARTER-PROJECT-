@@ -8,21 +8,48 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Deep obsidian & elevated charcoal tokens (PROJECT.md R1 / Interface Contract 1)
+        // Modern Figma-inspired deep surfaces & elevations
         charcoal: {
-          950: "#0d0f12", // Deep obsidian background
-          900: "#121417", // Primary app background
-          850: "#16191e", // Intermediate elevated tile / status pill
-          800: "#1a1e24", // Elevated card container 1
-          700: "#222730", // Elevated card container 2 / hover
-          600: "#2b323d", // Subtle hairline border
-          500: "#475569", // Border active / secondary text border
+          950: "#0e1013", // Ultra-deep background
+          900: "#131518", // App canvas background
+          850: "#16181d", // Icon rail / deep sidebar
+          800: "#1b1d22", // Contextual drawer / panel
+          750: "#21242b", // Card container surface
+          700: "#282c35", // Card hover / elevated surface
+          600: "#2e323d", // Card & divider borders
+          500: "#454b5b", // Border active / muted text
         },
-        // Accent tokens (PROJECT.md R1 / Interface Contract 1)
+        // Modern Royal Blue & Figma Palette
+        primary: {
+          50: "#eef2ff",
+          100: "#e0e7ff",
+          200: "#c7d2fe",
+          300: "#a5b4fc",
+          400: "#818cf8",
+          500: "#4f6bf7",
+          600: "#3b66ff", // Primary brand button & active state
+          700: "#2b54e6",
+          800: "#1e42d0",
+          900: "#1530a6",
+        },
+        // Progress & Status Accents
+        tangerine: {
+          400: "#fb923c",
+          500: "#ff783e", // In-progress orange bar
+          600: "#ea580c",
+        },
+        lime: {
+          400: "#4ade80",
+          500: "#22c55e", // Completed green bar
+          600: "#16a34a",
+        },
+        // Backward-compatible semantic accent mapping
         accent: {
-          teal: "#14b8a6",    // Primary teal accent
-          emerald: "#10b981", // Completed checks & active indicators
-          violet: "#8b5cf6",  // Entertainment tags
+          teal: "#3b66ff",    // Primary accent switched to Royal Blue
+          blue: "#3b66ff",    // Electric Royal Blue
+          orange: "#ff783e",  // Warm Tangerine In-Progress
+          emerald: "#22c55e", // Neon Emerald Done
+          violet: "#6366f1",  // Media & horizon tags
           amber: "#f59e0b",   // Streaks & priority flags
         },
         // Semantic CSS-variable-backed color bridges
@@ -36,16 +63,16 @@ export default {
         },
         // Backward-compatibility alias for sage
         sage: {
-          50: "#f0fdf9",
-          100: "#ccfbef",
-          200: "#99f6e0",
-          300: "#5eead0",
-          400: "#2dd4b9",
-          500: "#14b8a6", // Primary Accent
-          600: "#0d9488",
-          700: "#0f7669",
-          800: "#115e54",
-          900: "#134e46",
+          50: "#eef2ff",
+          100: "#e0e7ff",
+          200: "#c7d2fe",
+          300: "#a5b4fc",
+          400: "#818cf8",
+          500: "#3b66ff", // Primary Accent
+          600: "#2b54e6",
+          700: "#1e42d0",
+          800: "#1530a6",
+          900: "#0f2278",
         },
       },
       fontFamily: {
