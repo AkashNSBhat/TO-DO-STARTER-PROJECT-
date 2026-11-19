@@ -14,12 +14,14 @@ import {
   Box,
   Plus,
   ChevronDown,
+  Compass,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 export type NavTab =
   | "dashboard"
   | "tasks"
+  | "discover"
   | "movies"
   | "series"
   | "archive"
@@ -38,6 +40,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
   { id: "tasks", label: "Daily Tasks", icon: CheckSquare, badge: "11" },
+  { id: "discover", label: "Discover", icon: Compass, badge: "New" },
   { id: "movies", label: "Movies", icon: Film },
   { id: "series", label: "Series", icon: Tv },
   { id: "archive", label: "Archive", icon: Archive },
@@ -104,6 +107,27 @@ const DRAWER_SECTIONS: Record<
         items: [
           { label: "Upcoming", count: 5 },
           { label: "Overdue", count: 0 },
+        ],
+      },
+    ],
+  },
+  discover: {
+    title: "Discover Catalogue",
+    groups: [
+      {
+        title: "Media Categories",
+        items: [
+          { label: "Movies Catalogue", count: 130, active: true },
+          { label: "Series & Shows", count: 110 },
+        ],
+      },
+      {
+        title: "Languages",
+        items: [
+          { label: "English", count: "Global" },
+          { label: "Hindi (हिंदी)", count: "Popular" },
+          { label: "Kannada (ಕನ್ನಡ)", count: "Regional" },
+          { label: "German (Deutsch)", count: "European" },
         ],
       },
     ],

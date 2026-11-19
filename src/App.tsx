@@ -3,6 +3,7 @@ import { MainLayout } from "./components/layout/MainLayout";
 import { NavTab } from "./components/layout/Sidebar";
 import { DashboardPage } from "./pages/DashboardPage";
 import { TasksPage } from "./pages/TasksPage";
+import { DiscoverPage } from "./pages/DiscoverPage";
 import { MoviesPage } from "./pages/MoviesPage";
 import { SeriesPage } from "./pages/SeriesPage";
 import { ArchivePage } from "./pages/ArchivePage";
@@ -21,6 +22,8 @@ export const App: React.FC = () => {
         return <DashboardPage />;
       case "tasks":
         return <TasksPage />;
+      case "discover":
+        return <DiscoverPage />;
       case "movies":
         return <MoviesPage />;
       case "series":

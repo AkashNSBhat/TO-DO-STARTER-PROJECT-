@@ -14,6 +14,7 @@ interface HeaderProps {
 const TAB_TITLES: Record<NavTab, { title: string; subtitle: string }> = {
   dashboard: { title: "Dashboard", subtitle: "Overview and personal productivity analytics" },
   tasks: { title: "Daily Tasks", subtitle: "Active task queue and daily goals" },
+  discover: { title: "Discover Catalogue", subtitle: "Search and explore global movies and web series" },
   movies: { title: "Movie Tracker", subtitle: "Planned, watching, and completed films" },
   series: { title: "Series Tracker", subtitle: "Episodic season tracking and progress" },
   archive: { title: "Entertainment Archive", subtitle: "Permanent archive of completed media" },
