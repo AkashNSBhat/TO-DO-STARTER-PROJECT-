@@ -114,10 +114,17 @@ export const DiscoverPage: React.FC = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-charcoal-50 flex items-center gap-2">
                 <span>Discover Catalogue</span>
-                <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20">
-                  <Sparkles className="w-3 h-3" />
-                  Offline Ready
-                </span>
+                {CatalogueClient.hasTmdbApiKey() ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    TMDB Live Connected
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20">
+                    <Sparkles className="w-3 h-3" />
+                    Offline Ready
+                  </span>
+                )}
               </h1>
               <p className="text-xs text-charcoal-400 mt-0.5">
                 Explore curated movies & series in English, Hindi, Kannada, German and more.

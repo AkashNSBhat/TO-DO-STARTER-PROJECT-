@@ -41,16 +41,51 @@ export class TMDBProvider implements IMetadataProvider {
   private imageBaseUrl = "https://image.tmdb.org/t/p/w500";
   private limiter = new RateLimiter(250); // Max 4 requests/sec (well within TMDB 40/10s limit)
 
+  static getStoredApiKey(): string {
+    if (typeof localStorage !== "undefined") {
+      const stored = localStorage.getItem("daymark_tmdb_api_key");
+      if (stored && stored.trim().length > 0) return stored.trim();
+    }
+    try {
+      const envKey = (import.meta as any).env?.VITE_TMDB_API_KEY;
+      if (envKey && typeof envKey === "string" && envKey.trim().length > 0) {
+        return envKey.trim();
+      }
+    } catch {}
+    if (typeof process !== "undefined" && process.env) {
+      const procKey = process.env.VITE_TMDB_API_KEY || process.env.TMDB_API_KEY;
+      if (procKey && typeof procKey === "string" && procKey.trim().length > 0) {
+        return procKey.trim();
+      }
+    }
+    return "";
+  }
+
+  static setStoredApiKey(key: string): void {
+    if (typeof localStorage !== "undefined") {
+      if (key && key.trim().length > 0) {
+        localStorage.setItem("daymark_tmdb_api_key", key.trim());
+      } else {
+        localStorage.removeItem("daymark_tmdb_api_key");
+      }
+    }
+  }
+
   constructor(apiKey?: string) {
-    this.apiKey = apiKey || (typeof process !== "undefined" && process.env?.TMDB_API_KEY) || "";
+    this.apiKey = (apiKey && apiKey.trim().length > 0) ? apiKey.trim() : TMDBProvider.getStoredApiKey();
   }
 
   setApiKey(key: string) {
     this.apiKey = key.trim();
+    TMDBProvider.setStoredApiKey(this.apiKey);
+  }
+
+  getApiKey(): string {
+    return this.apiKey;
   }
 
   hasApiKey(): boolean {
-    return Boolean(this.apiKey);
+    return Boolean(this.apiKey && this.apiKey.length > 5);
   }
 
   async search(

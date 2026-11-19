@@ -21,6 +21,7 @@ import { useAppInfo } from "../hooks/useAppInfo";
 import { useSettings } from "../hooks/useSettings";
 import { useTheme } from "../hooks/useTheme";
 import { DatabaseClient } from "../lib/db/client";
+import { CatalogueClient } from "../lib/catalog/client";
 import { cn } from "../lib/utils";
 
 export const SettingsPage: React.FC = () => {
@@ -42,6 +43,15 @@ export const SettingsPage: React.FC = () => {
   const [restoreContent, setRestoreContent] = useState<string | null>(null);
   const [restoreSuccess, setRestoreSuccess] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [tmdbApiKey, setTmdbApiKey] = useState(CatalogueClient.getTmdbApiKey());
+  const [tmdbKeySaved, setTmdbKeySaved] = useState(false);
+
+  const handleSaveTmdbKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    CatalogueClient.setTmdbApiKey(tmdbApiKey);
+    setTmdbKeySaved(true);
+    setTimeout(() => setTmdbKeySaved(false), 2500);
+  };
 
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,6 +232,60 @@ export const SettingsPage: React.FC = () => {
 
               <Button variant="primary" size="sm" type="submit">
                 Save Preferences
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        {/* TMDB Metadata API Integration */}
+        <Card
+          title="Metadata & Provider API Keys"
+          subtitle="Connect TMDB API for live global movie & series search"
+        >
+          <form onSubmit={handleSaveTmdbKey} className="space-y-4 pt-2">
+            <div className="flex items-center justify-between pb-1">
+              <span className="text-xs text-charcoal-400">Status</span>
+              <span
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                  CatalogueClient.hasTmdbApiKey()
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : "bg-charcoal-800 text-charcoal-400"
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    CatalogueClient.hasTmdbApiKey()
+                      ? "bg-emerald-400 animate-pulse"
+                      : "bg-charcoal-500"
+                  }`}
+                />
+                {CatalogueClient.hasTmdbApiKey()
+                  ? "Live API Connected"
+                  : "Offline Mode Only"}
+              </span>
+            </div>
+
+            <Input
+              label="The Movie Database (TMDB) API Key (v3 auth)"
+              value={tmdbApiKey}
+              onChange={setTmdbApiKey}
+              placeholder="e.g. 1762c1e57ef221da5cfd62d1e4badee5"
+              type="text"
+            />
+
+            <div className="flex items-center justify-between pt-1">
+              {tmdbKeySaved ? (
+                <span className="text-xs text-emerald-400 flex items-center gap-1 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> API Key Saved
+                </span>
+              ) : (
+                <span className="text-[11px] text-slate-400">
+                  Enables live global search in Discover
+                </span>
+              )}
+
+              <Button variant="primary" size="sm" type="submit">
+                Save API Key
               </Button>
             </div>
           </form>
