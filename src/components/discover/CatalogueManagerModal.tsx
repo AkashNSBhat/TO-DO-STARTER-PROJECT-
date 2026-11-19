@@ -27,14 +27,16 @@ interface CatalogueManagerModalProps {
 }
 
 const AVAILABLE_LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "hi", label: "Hindi (हिंदी)" },
+  { code: "en", label: "English (Franchises & Hits)" },
+  { code: "hi", label: "Hindi (हिंदी — Hits & Classics)" },
   { code: "kn", label: "Kannada (ಕನ್ನಡ)" },
-  { code: "de", label: "German (Deutsch)" },
+  { code: "ta", label: "Tamil (தமிழ்)" },
+  { code: "te", label: "Telugu (తెలుగు)" },
+  { code: "ml", label: "Malayalam (മലയാളം)" },
+  { code: "ko", label: "Korean (한국어)" },
+  { code: "ja", label: "Japanese (Anime/Cinema)" },
+  { code: "th", label: "Thai (ไทย)" },
   { code: "es", label: "Spanish" },
-  { code: "ko", label: "Korean" },
-  { code: "ja", label: "Japanese" },
-  { code: "fr", label: "French" },
 ];
 
 export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
@@ -49,7 +51,6 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
     "en",
     "hi",
     "kn",
-    "de",
   ]);
   const [targetPerLanguage, setTargetPerLanguage] = useState<number>(25);
   const [includeEpisodes, setIncludeEpisodes] = useState<boolean>(true);
@@ -246,25 +247,39 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                 <label className="block text-xs font-medium text-charcoal-400">
                   Target Languages for Import:
                 </label>
-                <div className="flex items-center gap-1.5 text-[11px]">
+                <div className="flex items-center gap-1.5 text-[11px] flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedLanguages(["en", "hi", "kn", "de"]);
-                      setTargetPerLanguage(1250);
+                      setSelectedLanguages(["en", "hi", "kn"]);
+                      setTargetPerLanguage(1700);
                     }}
                     disabled={isRunning}
                     className="px-2 py-0.5 rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 font-semibold cursor-pointer transition-colors"
                   >
-                    ⭐ Preset: 5,000 Movies & 5,000 Series
+                    ⭐ Core Focus: EN + HI + KN (5,100+)
                   </button>
                   <button
                     type="button"
-                    onClick={() => setSelectedLanguages(AVAILABLE_LANGUAGES.map((l) => l.code))}
+                    onClick={() => {
+                      setSelectedLanguages(["ta", "te", "ml", "ko", "ja", "th", "es"]);
+                      setTargetPerLanguage(25);
+                    }}
+                    disabled={isRunning}
+                    className="px-2 py-0.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 font-semibold cursor-pointer transition-colors"
+                  >
+                    🌏 Top 25 Showcase (Regional & Asian)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLanguages(AVAILABLE_LANGUAGES.map((l) => l.code));
+                      setTargetPerLanguage(500);
+                    }}
                     disabled={isRunning}
                     className="px-2 py-0.5 rounded bg-charcoal-800 hover:bg-charcoal-700 text-charcoal-300 cursor-pointer"
                   >
-                    Select All (8)
+                    Select All (10)
                   </button>
                 </div>
               </div>
@@ -301,15 +316,15 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                   disabled={isRunning}
                   className="w-full px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-700 text-charcoal-100 text-xs focus:outline-none focus:border-teal-500"
                 >
-                  <option value={25}>25 each (Fast Test — ~200 items)</option>
-                  <option value={50}>50 each (Balanced — ~400 items)</option>
-                  <option value={100}>100 each (Substantial — ~800 items)</option>
-                  <option value={250}>250 each (Deep Catalogue — ~2,000 items)</option>
-                  <option value={500}>500 each (Large Catalogue — ~4,000 items)</option>
-                  <option value={625}>625 each (⭐ 5,000 Movies + 5,000 Series across 8 languages)</option>
-                  <option value={1250}>1,250 each (⭐ 5,000 Movies + 5,000 Series across 4 languages)</option>
-                  <option value={2500}>2,500 each (Massive Catalogue — ~20,000 items)</option>
-                  <option value={5000}>5,000 each (Maximum Volume — ~40,000 items)</option>
+                  <option value={20}>20 each (Curated Top 20 Showcase)</option>
+                  <option value={25}>25 each (Curated Top 25 Showcase)</option>
+                  <option value={50}>50 each (Balanced — ~500 items)</option>
+                  <option value={100}>100 each (Substantial — ~1,000 items)</option>
+                  <option value={250}>250 each (Deep Catalogue — ~2,500 items)</option>
+                  <option value={500}>500 each (Large Catalogue — ~5,000 items)</option>
+                  <option value={1700}>1,700 each (⭐ 5,100 Movies + 5,100 Series across EN, HI, KN)</option>
+                  <option value={2500}>2,500 each (Massive Catalogue — ~25,000 items)</option>
+                  <option value={5000}>5,000 each (Maximum Volume — ~50,000 items)</option>
                 </select>
                 <div className="mt-1 text-[11px] text-teal-400/90 font-medium">
                   Estimated Run: {selectedLanguages.length * targetPerLanguage} Movies + {selectedLanguages.length * targetPerLanguage} Series across {selectedLanguages.length} language(s)

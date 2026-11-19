@@ -13,9 +13,12 @@ const LANGUAGES = [
   { code: "en", label: "English" },
   { code: "hi", label: "Hindi (हिंदी)" },
   { code: "kn", label: "Kannada (ಕನ್ನಡ)" },
-  { code: "de", label: "German (Deutsch)" },
-  { code: "ko", label: "Korean" },
-  { code: "ja", label: "Japanese" },
+  { code: "ta", label: "Tamil (தமிழ்)" },
+  { code: "te", label: "Telugu (తెలుగు)" },
+  { code: "ml", label: "Malayalam (മലയാളം)" },
+  { code: "ko", label: "Korean (한국어)" },
+  { code: "ja", label: "Japanese (日本語)" },
+  { code: "th", label: "Thai (ไทย)" },
   { code: "es", label: "Spanish" },
 ];
 

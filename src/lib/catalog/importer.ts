@@ -31,16 +31,20 @@ export interface ImportProgress {
   errorMessage?: string;
 }
 
-const DEFAULT_LANGUAGES = ["en", "hi", "kn", "de"];
+const DEFAULT_LANGUAGES = ["en", "hi", "kn"];
 
 const LANGUAGE_LABELS: Record<string, string> = {
   en: "English",
   hi: "Hindi",
   kn: "Kannada",
-  de: "German",
-  es: "Spanish",
-  ja: "Japanese",
+  ta: "Tamil",
+  te: "Telugu",
+  ml: "Malayalam",
   ko: "Korean",
+  ja: "Japanese",
+  th: "Thai",
+  es: "Spanish",
+  de: "German",
   fr: "French",
   it: "Italian",
 };
@@ -257,13 +261,36 @@ export class TMDBImporter {
     let page = 1;
     const maxPages = Math.ceil(targetCount / 20) + 3;
 
-    // Minimum vote threshold: lower for regional (kn) to capture rich films, higher for global
-    const minVotes = lang === "kn" ? 15 : lang === "hi" ? 40 : 100;
+    // Minimum vote threshold: tailored by industry size
+    const minVotes =
+      lang === "kn" || lang === "ml" || lang === "th"
+        ? 2
+        : lang === "hi" || lang === "ta" || lang === "te"
+        ? 8
+        : lang === "ko" || lang === "ja" || lang === "es"
+        ? 20
+        : 80;
 
     while (importedForLang < targetCount && page <= maxPages) {
       if (!(await this.checkPauseOrCancel())) return;
 
-      const url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_original_language=${lang}&sort_by=popularity.desc&vote_count.gte=${minVotes}&page=${page}&include_adult=false`;
+      // Smart discovery queries:
+      // Hindi: mix blockbuster hits with beloved classics (pre-2008)
+      // English: mix trending with high-vote franchise blockbusters (Marvel, DC, Star Wars, LotR)
+      let sortBy = "popularity.desc";
+      let dateFilter = "";
+      if (lang === "hi" && page > 2) {
+        if (page % 2 === 0) {
+          sortBy = "vote_count.desc";
+          dateFilter = "&primary_release_date.lte=2008-12-31";
+        } else {
+          sortBy = "vote_average.desc";
+        }
+      } else if (lang === "en" && page > 3) {
+        sortBy = page % 2 === 0 ? "vote_count.desc" : "vote_average.desc";
+      }
+
+      const url = `https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_original_language=${lang}&sort_by=${sortBy}&vote_count.gte=${minVotes}&page=${page}&include_adult=false${dateFilter}`;
 
       try {
         const data = await this.fetchWithRetry(url);
@@ -354,12 +381,26 @@ export class TMDBImporter {
     let importedForLang = 0;
     let page = 1;
     const maxPages = Math.ceil(targetCount / 20) + 3;
-    const minVotes = lang === "kn" ? 5 : lang === "hi" ? 25 : 80;
+    const minVotes =
+      lang === "kn" || lang === "ml" || lang === "th"
+        ? 1
+        : lang === "hi" || lang === "ta" || lang === "te"
+        ? 5
+        : lang === "ko" || lang === "ja" || lang === "es"
+        ? 15
+        : 50;
 
     while (importedForLang < targetCount && page <= maxPages) {
       if (!(await this.checkPauseOrCancel())) return;
 
-      const url = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&with_original_language=${lang}&sort_by=popularity.desc&vote_count.gte=${minVotes}&page=${page}&include_adult=false`;
+      let sortBy = "popularity.desc";
+      if (lang === "en" && page > 3) {
+        sortBy = page % 2 === 0 ? "vote_count.desc" : "vote_average.desc";
+      } else if (lang === "hi" && page > 2) {
+        sortBy = "vote_average.desc";
+      }
+
+      const url = `https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&with_original_language=${lang}&sort_by=${sortBy}&vote_count.gte=${minVotes}&page=${page}&include_adult=false`;
 
       try {
         const data = await this.fetchWithRetry(url);
