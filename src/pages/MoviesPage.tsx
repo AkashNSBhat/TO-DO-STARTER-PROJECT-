@@ -15,6 +15,7 @@ import {
   Trash2,
   AlertTriangle,
   Image as ImageIcon,
+  X,
 } from "lucide-react";
 import { useMovies } from "../hooks";
 import {
@@ -193,11 +194,33 @@ export const MoviesPage: React.FC = () => {
 
   const handleAddCustomGenre = () => {
     const trimmed = customGenre.trim();
-    if (trimmed && !genres.includes(trimmed)) {
-      setGenres((prev) => [...prev, trimmed]);
+    if (trimmed) {
+      if (!genres.includes(trimmed)) {
+        setGenres((prev) => [...prev, trimmed]);
+      }
       setCustomGenre("");
     }
   };
+
+  const allGenreOptions = useMemo(() => {
+    const base = [
+      "Sci-Fi",
+      "Action",
+      "Drama",
+      "Thriller",
+      "Crime",
+      "Comedy",
+      "Adventure",
+      "Mystery",
+      "Animation",
+      "Horror",
+      "Fantasy",
+      "Romance",
+      "Documentary",
+    ];
+    const set = new Set([...base, ...availableGenres, ...genres]);
+    return Array.from(set);
+  }, [availableGenres, genres]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
@@ -699,22 +722,44 @@ export const MoviesPage: React.FC = () => {
           </div>
 
           {/* Genres Tagging */}
-          <div>
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-              Genre Selection
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {[
-                "Sci-Fi",
-                "Action",
-                "Drama",
-                "Thriller",
-                "Crime",
-                "Comedy",
-                "Adventure",
-                "Mystery",
-                "Animation",
-              ].map((g) => {
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                Genre & Tag Selection
+              </label>
+              <span className="text-[11px] text-slate-400">
+                {genres.length} selected
+              </span>
+            </div>
+
+            {/* Selected Tags Row with Remove Buttons */}
+            {genres.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-charcoal-750 border border-slate-200/80 dark:border-charcoal-600/80">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                  Active Tags:
+                </span>
+                {genres.map((g) => (
+                  <span
+                    key={g}
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-lg bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 font-medium"
+                  >
+                    <span>{g}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleGenre(g)}
+                      className="hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Remove tag"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Genre Tiles: Presets + Custom Added Tiles */}
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto py-1">
+              {allGenreOptions.map((g) => {
                 const isSelected = genres.includes(g);
                 return (
                   <button
@@ -722,20 +767,21 @@ export const MoviesPage: React.FC = () => {
                     key={g}
                     onClick={() => toggleGenre(g)}
                     className={cn(
-                      "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                      "text-xs px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
                       isSelected
-                        ? "bg-teal-500 text-charcoal-950 font-bold"
+                        ? "bg-teal-500 text-charcoal-950 font-bold shadow-xs scale-102"
                         : "bg-slate-100 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-charcoal-600"
                     )}
                   >
-                    {g}
+                    <span>{g}</span>
+                    {isSelected && <CheckCircle2 className="w-3 h-3" />}
                   </button>
                 );
               })}
             </div>
 
             {/* Custom Genre Input */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pt-1">
               <input
                 type="text"
                 value={customGenre}
@@ -746,16 +792,18 @@ export const MoviesPage: React.FC = () => {
                     handleAddCustomGenre();
                   }
                 }}
-                placeholder="Add other genre..."
-                className="flex-1 text-xs py-1 px-2.5 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                placeholder="Type new genre or tag (e.g. Cyberpunk, Noir)..."
+                className="flex-1 text-xs py-1.5 px-3 rounded-lg bg-slate-100 dark:bg-charcoal-700 border border-slate-200 dark:border-charcoal-600 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
               <Button
                 type="button"
                 variant="secondary"
                 size="sm"
                 onClick={handleAddCustomGenre}
+                disabled={!customGenre.trim()}
+                icon={<Plus className="w-3.5 h-3.5" />}
               >
-                Add
+                Add Tag
               </Button>
             </div>
           </div>

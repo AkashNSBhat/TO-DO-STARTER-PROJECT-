@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertTriangle,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useSeries, SeriesFilter } from "../hooks";
 import {
@@ -207,11 +208,23 @@ export const SeriesPage: React.FC = () => {
 
   const handleAddCustomGenre = () => {
     const trimmed = customGenre.trim();
-    if (trimmed && !newGenres.includes(trimmed)) {
-      setNewGenres((prev) => [...prev, trimmed]);
+    if (trimmed) {
+      if (!newGenres.includes(trimmed)) {
+        setNewGenres((prev) => [...prev, trimmed]);
+      }
       setCustomGenre("");
     }
   };
+
+  const addGenreOptions = useMemo(() => {
+    const set = new Set([...PRESET_GENRES, ...newGenres]);
+    return Array.from(set);
+  }, [newGenres]);
+
+  const editGenreOptions = useMemo(() => {
+    const set = new Set([...PRESET_GENRES, ...editGenres]);
+    return Array.from(set);
+  }, [editGenres]);
 
   // Submit Create Series
   const handleCreateSeriesSubmit = async (e: React.FormEvent) => {
@@ -1043,12 +1056,44 @@ export const SeriesPage: React.FC = () => {
           </div>
 
           {/* Genres Tag Selector */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-charcoal-700">
-            <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-              Genres & Tags
-            </label>
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_GENRES.map((g) => {
+          <div className="space-y-2 pt-2 border-t border-slate-200 dark:border-charcoal-700">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                Genres & Tags
+              </label>
+              <span className="text-[11px] text-slate-400">
+                {newGenres.length} selected
+              </span>
+            </div>
+
+            {/* Selected Tags Row with Remove Buttons */}
+            {newGenres.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-charcoal-750 border border-slate-200/80 dark:border-charcoal-600/80">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                  Active Tags:
+                </span>
+                {newGenres.map((g) => (
+                  <span
+                    key={g}
+                    className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-lg bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 font-medium"
+                  >
+                    <span>{g}</span>
+                    <button
+                      type="button"
+                      onClick={() => toggleGenre(g)}
+                      className="hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                      title="Remove tag"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Genre Tiles: Presets + Custom Added Tiles */}
+            <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto py-1">
+              {addGenreOptions.map((g) => {
                 const isSelected = newGenres.includes(g);
                 return (
                   <button
@@ -1056,22 +1101,24 @@ export const SeriesPage: React.FC = () => {
                     key={g}
                     onClick={() => toggleGenre(g)}
                     className={cn(
-                      "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                      "text-xs px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
                       isSelected
-                        ? "bg-teal-500 text-charcoal-950 font-bold"
+                        ? "bg-teal-500 text-charcoal-950 font-bold shadow-xs scale-102"
                         : "bg-slate-100 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                     )}
                   >
-                    {g}
+                    <span>{g}</span>
+                    {isSelected && <CheckCircle2 className="w-3 h-3" />}
                   </button>
                 );
               })}
             </div>
+
             {/* Custom Genre Input */}
             <div className="flex items-center gap-2 pt-1.5">
               <input
                 type="text"
-                placeholder="Custom genre tag..."
+                placeholder="Type new custom tag (e.g. Anime, Mystery)..."
                 value={customGenre}
                 onChange={(e) => setCustomGenre(e.target.value)}
                 onKeyDown={(e) => {
@@ -1080,7 +1127,7 @@ export const SeriesPage: React.FC = () => {
                     handleAddCustomGenre();
                   }
                 }}
-                className="text-xs px-2.5 py-1 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
               <Button
                 type="button"
@@ -1088,6 +1135,7 @@ export const SeriesPage: React.FC = () => {
                 size="sm"
                 onClick={handleAddCustomGenre}
                 disabled={!customGenre.trim()}
+                icon={<Plus className="w-3.5 h-3.5" />}
               >
                 Add Tag
               </Button>
@@ -1184,12 +1232,46 @@ export const SeriesPage: React.FC = () => {
             />
 
             {/* Edit Genres */}
-            <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
-                Genres
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {PRESET_GENRES.map((g) => {
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Genres & Tags
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  {editGenres.length} selected
+                </span>
+              </div>
+
+              {/* Selected Tags Row with Remove Buttons */}
+              {editGenres.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-slate-50 dark:bg-charcoal-750 border border-slate-200/80 dark:border-charcoal-600/80">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mr-1">
+                    Active Tags:
+                  </span>
+                  {editGenres.map((g) => (
+                    <span
+                      key={g}
+                      className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-lg bg-teal-500/15 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/30 font-medium"
+                    >
+                      <span>{g}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditGenres((prev) => prev.filter((item) => item !== g))
+                        }
+                        className="hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                        title="Remove tag"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Genre Tiles: Presets + Custom Added Tiles */}
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto py-1">
+                {editGenreOptions.map((g) => {
                   const isSelected = editGenres.includes(g);
                   return (
                     <button
@@ -1201,24 +1283,36 @@ export const SeriesPage: React.FC = () => {
                         )
                       }
                       className={cn(
-                        "text-xs px-2.5 py-1 rounded-md font-medium transition-all cursor-pointer",
+                        "text-xs px-2.5 py-1 rounded-lg font-medium transition-all cursor-pointer flex items-center gap-1",
                         isSelected
-                          ? "bg-teal-500 text-charcoal-950 font-bold"
+                          ? "bg-teal-500 text-charcoal-950 font-bold shadow-xs scale-102"
                           : "bg-slate-100 dark:bg-charcoal-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200"
                       )}
                     >
-                      {g}
+                      <span>{g}</span>
+                      {isSelected && <CheckCircle2 className="w-3 h-3" />}
                     </button>
                   );
                 })}
               </div>
+
+              {/* Custom Genre Input */}
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="text"
-                  placeholder="Add custom genre..."
+                  placeholder="Type new custom tag (e.g. Anime, Mystery)..."
                   value={editCustomGenre}
                   onChange={(e) => setEditCustomGenre(e.target.value)}
-                  className="text-xs px-2.5 py-1 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (editCustomGenre.trim() && !editGenres.includes(editCustomGenre.trim())) {
+                        setEditGenres((prev) => [...prev, editCustomGenre.trim()]);
+                        setEditCustomGenre("");
+                      }
+                    }
+                  }}
+                  className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-charcoal-600 bg-slate-50 dark:bg-charcoal-700 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-teal-500"
                 />
                 <Button
                   type="button"
@@ -1231,8 +1325,9 @@ export const SeriesPage: React.FC = () => {
                     }
                   }}
                   disabled={!editCustomGenre.trim()}
+                  icon={<Plus className="w-3.5 h-3.5" />}
                 >
-                  Add
+                  Add Tag
                 </Button>
               </div>
             </div>
