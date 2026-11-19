@@ -4,16 +4,11 @@ import {
   CatalogFilterOptions,
   CatalogMediaType,
 } from "./types";
-import {
-  ALL_SEED_CATALOG,
-  CATALOG_METADATA,
-} from "./seedCatalog";
 import { DatabaseClient } from "../db/client";
 import { TMDBProvider } from "./provider";
+import { CatalogueDatabase, CatalogueStats } from "./database";
 
 export class CatalogueClient {
-  private static localCatalog: MediaCatalogItem[] = [...ALL_SEED_CATALOG];
-  private static metadata: CatalogMetadata = { ...CATALOG_METADATA };
   private static tmdbProvider: TMDBProvider = new TMDBProvider();
 
   /**
@@ -41,186 +36,114 @@ export class CatalogueClient {
    * Returns catalog metadata, versioning, and provider info
    */
   static async getCatalogMetadata(): Promise<CatalogMetadata> {
+    const meta = CatalogueDatabase.getMetadata();
     return {
-      ...this.metadata,
-      totalMovies: this.localCatalog.filter((i) => i.mediaType === "movie").length,
-      totalSeries: this.localCatalog.filter((i) => i.mediaType === "series").length,
+      ...meta,
       provider: this.tmdbProvider.hasApiKey()
-        ? "TMDB Live API + Bundled Offline Pack"
-        : "TMDB & TVmaze Compatible Local Pack (Offline)",
+        ? "TMDB Live API + Offline SQLite Catalogue"
+        : "TMDB & TVmaze Compatible Local Catalogue (Offline)",
     };
+  }
+
+  /**
+   * Returns detailed database stats (counts of movies, series, seasons, episodes, size)
+   */
+  static async getStats(): Promise<CatalogueStats> {
+    return CatalogueDatabase.getStats();
+  }
+
+  /**
+   * Reset catalogue to clean baseline seed pack
+   */
+  static resetCatalog(): void {
+    CatalogueDatabase.reset();
   }
 
   /**
    * Retrieves items with multi-criteria filtering, sorting, and live TMDB integration
    */
   static async getCatalogItems(
-    options: CatalogFilterOptions = {}
+    options: CatalogFilterOptions = {},
+    pagination?: { page: number; pageSize: number }
   ): Promise<MediaCatalogItem[]> {
-    let items = [...this.localCatalog];
+    // If the user has typed an active search query and TMDB API key is active, query live TMDB in background
+    if (
+      this.tmdbProvider.hasApiKey() &&
+      options.searchQuery &&
+      options.searchQuery.trim().length >= 2
+    ) {
+      try {
+        const tmdbMedia = options.mediaType || "movie";
+        const tmdbResults = await this.tmdbProvider.search(
+          options.searchQuery.trim(),
+          tmdbMedia,
+          options.language || "en"
+        );
 
-    // Filter by Media Type (movie / series)
-    if (options.mediaType) {
-      items = items.filter((item) => item.mediaType === options.mediaType);
-    }
+        const newItems: MediaCatalogItem[] = [];
+        for (const res of tmdbResults) {
+          const catalogId = `cat-tmdb-${res.mediaType}-${res.providerId}`;
+          const existing = CatalogueDatabase.getItemByProviderId("tmdb", res.providerId);
 
-    // Filter by Search Query
-    if (options.searchQuery && options.searchQuery.trim().length > 0) {
-      const q = options.searchQuery.trim().toLowerCase();
-      items = items.filter((item) => {
-        if (item.primaryTitle.toLowerCase().includes(q)) return true;
-        if (item.originalTitle.toLowerCase().includes(q)) return true;
-        if (item.genres.some((g) => g.toLowerCase().includes(q))) return true;
-        if (
-          item.alternateTitles &&
-          item.alternateTitles.some((alt) => alt.title.toLowerCase().includes(q))
-        ) {
-          return true;
-        }
-        return false;
-      });
-
-      // Live TMDB API Search Integration when API Key is active
-      if (this.tmdbProvider.hasApiKey() && options.searchQuery.trim().length >= 2) {
-        try {
-          const tmdbMedia = options.mediaType || "movie";
-          const tmdbResults = await this.tmdbProvider.search(
-            options.searchQuery.trim(),
-            tmdbMedia,
-            options.language || "en"
-          );
-
-          for (const res of tmdbResults) {
-            const catalogId = `cat-tmdb-${res.mediaType}-${res.providerId}`;
-
-            // Check if already in items or localCatalog
-            const alreadyPresent = items.some(
-              (i) =>
-                i.id === catalogId ||
-                (i.primaryTitle.toLowerCase() === res.title.toLowerCase() &&
-                  i.releaseYear === res.releaseYear)
-            );
-
-            if (!alreadyPresent) {
-              const tmdbItem: MediaCatalogItem = {
-                id: catalogId,
-                provider: "tmdb",
-                providerId: res.providerId,
-                mediaType: res.mediaType,
-                originalTitle: res.originalTitle,
-                primaryTitle: res.title,
-                description: res.overview,
-                releaseYear: res.releaseYear,
-                genres: [], // genres are enriched on detail inspection
-                posterUrl: res.posterUrl,
-                originalLanguage: res.originalLanguage,
-                rating: res.rating,
-                attribution: "Metadata provided by TMDB. Live query via API key.",
-                languages: [
-                  {
-                    id: `${catalogId}-lang-${res.originalLanguage}`,
-                    catalogId,
-                    languageCode: res.originalLanguage,
-                    languageName: res.originalLanguage.toUpperCase(),
-                    isOriginal: true,
-                    isDubbed: false,
-                    hasSubtitles: true,
-                  },
-                ],
-              };
-
-              items.push(tmdbItem);
-
-              // Cache in local catalog for instant offline re-access
-              if (!this.localCatalog.some((c) => c.id === catalogId)) {
-                this.localCatalog.push(tmdbItem);
-              }
-            }
+          if (!existing) {
+            newItems.push({
+              id: catalogId,
+              provider: "tmdb",
+              providerId: res.providerId,
+              mediaType: res.mediaType,
+              originalTitle: res.originalTitle,
+              primaryTitle: res.title,
+              description: res.overview,
+              releaseYear: res.releaseYear,
+              genres: [],
+              posterUrl: res.posterUrl,
+              originalLanguage: res.originalLanguage,
+              rating: res.rating,
+              attribution: "Metadata provided by TMDB. Live query via API key.",
+              languages: [
+                {
+                  id: `${catalogId}-lang-${res.originalLanguage}`,
+                  catalogId,
+                  languageCode: res.originalLanguage,
+                  languageName: res.originalLanguage.toUpperCase(),
+                  isOriginal: true,
+                  isDubbed: false,
+                  hasSubtitles: true,
+                },
+              ],
+              alternateTitles: [],
+            });
           }
-        } catch (tmdbErr) {
-          console.warn("[CatalogueClient] TMDB Live query fallback to offline pack:", tmdbErr);
         }
-      }
-    }
 
-    // Filter by Language
-    if (options.language && options.language !== "all") {
-      const lang = options.language.toLowerCase();
-      items = items.filter((item) => {
-        if (item.originalLanguage.toLowerCase() === lang) return true;
-        if (
-          item.languages &&
-          item.languages.some((l) => l.languageCode.toLowerCase() === lang)
-        ) {
-          return true;
+        if (newItems.length > 0) {
+          CatalogueDatabase.upsertBatch(newItems);
         }
-        return false;
-      });
-    }
-
-    // Filter by Genre
-    if (options.genre && options.genre !== "all") {
-      const targetGenre = options.genre.toLowerCase();
-      items = items.filter((item) =>
-        item.genres.some((g) => g.toLowerCase() === targetGenre)
-      );
-    }
-
-    // Filter by Release Year Decade
-    if (options.releaseYearDecade && options.releaseYearDecade !== "all") {
-      switch (options.releaseYearDecade) {
-        case "2020s":
-          items = items.filter((item) => item.releaseYear >= 2020);
-          break;
-        case "2010s":
-          items = items.filter(
-            (item) => item.releaseYear >= 2010 && item.releaseYear < 2020
-          );
-          break;
-        case "2000s":
-          items = items.filter(
-            (item) => item.releaseYear >= 2000 && item.releaseYear < 2010
-          );
-          break;
-        case "classics":
-          items = items.filter((item) => item.releaseYear < 2000);
-          break;
+      } catch (err) {
+        console.warn("[CatalogueClient] Live TMDB search fallback to local database:", err);
       }
     }
 
-    // Sort items
-    const sortBy = options.sortBy || "rating";
-    items.sort((a, b) => {
-      switch (sortBy) {
-        case "rating":
-          return b.rating - a.rating;
-        case "year_desc":
-          return b.releaseYear - a.releaseYear;
-        case "year_asc":
-          return a.releaseYear - b.releaseYear;
-        case "title_asc":
-          return a.primaryTitle.localeCompare(b.primaryTitle);
-        default:
-          return b.rating - a.rating;
-      }
-    });
-
-    return items;
+    // Query from the fast offline local database
+    const queryResult = CatalogueDatabase.query(
+      options,
+      pagination || { page: 1, pageSize: 10000 }
+    );
+    return queryResult.items;
   }
 
   /**
    * Find item by ID, enriching with live TMDB details and episodes if needed
    */
   static async getCatalogItemById(id: string): Promise<MediaCatalogItem | null> {
-    let item = this.localCatalog.find((i) => i.id === id);
+    let item = CatalogueDatabase.getItemById(id);
 
-    // If item came from live TMDB and needs full details (genres, seasons, episodes)
+    // If item came from live TMDB search and needs rich details
     if (item && item.provider === "tmdb" && (!item.genres || item.genres.length === 0)) {
       if (this.tmdbProvider.hasApiKey()) {
         try {
           const fullDetails = await this.tmdbProvider.getDetails(item.providerId, item.mediaType);
           if (fullDetails) {
-            // If series, fetch Season 1 episodes as well
             if (fullDetails.mediaType === "series" && fullDetails.seasons && fullDetails.seasons.length > 0) {
               const s1 = fullDetails.seasons[0];
               const eps = await this.tmdbProvider.getSeasonEpisodes(item.providerId, s1.seasonNumber);
@@ -228,6 +151,7 @@ export class CatalogueClient {
             }
 
             Object.assign(item, fullDetails);
+            CatalogueDatabase.upsertItem(item);
           }
         } catch (err) {
           console.warn("[CatalogueClient] Failed to enrich TMDB item details:", err);

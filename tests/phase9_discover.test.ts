@@ -1,11 +1,14 @@
 import React from "react";
 import { describe, it, expect, render } from "./test-utils";
 import { CatalogueClient } from "../src/lib/catalog/client";
+import { CatalogueDatabase } from "../src/lib/catalog/database";
+import { TMDBImporter } from "../src/lib/catalog/importer";
 import { DatabaseClient } from "../src/lib/db/client";
 import { resetMockDb } from "./mocks/tauriMock";
 import { TMDBProvider, TVmazeProvider } from "../src/lib/catalog/provider";
 import { DiscoverPage } from "../src/pages/DiscoverPage";
 import { DiscoverCard } from "../src/components/discover/DiscoverCard";
+import { CatalogueManagerModal } from "../src/components/discover/CatalogueManagerModal";
 
 describe("Phase 9 — Discover Movie & Web Series Catalogue Test Suite", () => {
   resetMockDb();
@@ -258,6 +261,69 @@ describe("Phase 9 — Discover Movie & Web Series Catalogue Test Suite", () => {
       expect(container.textContent).toContain("Movies");
       expect(container.textContent).toContain("Series & Shows");
       expect(container.textContent).toContain("All Languages");
+    });
+
+    it("renders CatalogueManagerModal with metrics and importer controls", () => {
+      const { container } = render(
+        <CatalogueManagerModal isOpen={true} onClose={() => {}} />
+      );
+
+      expect(container.textContent).toContain("Catalogue Manager");
+      expect(container.textContent).toContain("Movies");
+      expect(container.textContent).toContain("Series");
+      expect(container.textContent).toContain("Storage Size");
+      expect(container.textContent).toContain("Real TMDB Importer Controls");
+      expect(container.textContent).toContain("Target Languages");
+    });
+  });
+
+  // =============================================================
+  // 8. Offline Database Engine & Importer Subsystems
+  // =============================================================
+  describe("Offline SQLite Catalogue Database Engine & Importer", () => {
+    it("retrieves accurate catalogue statistics and storage size metrics", () => {
+      const stats = CatalogueDatabase.getStats();
+      expect(stats.totalMovies).toBeGreaterThanOrEqual(100);
+      expect(stats.totalSeries).toBeGreaterThanOrEqual(100);
+      expect(stats.totalSeasons).toBeGreaterThanOrEqual(100);
+      expect(stats.totalEpisodes).toBeGreaterThanOrEqual(500);
+      expect(stats.databaseSizeBytes).toBeGreaterThan(0);
+      expect(stats.catalogVersion).toBeDefined();
+    });
+
+    it("executes paginated queries with totalCount and totalPages", () => {
+      const result = CatalogueDatabase.query({ mediaType: "movie" }, { page: 1, pageSize: 20 });
+      expect(result.items.length).toBe(20);
+      expect(result.page).toBe(1);
+      expect(result.pageSize).toBe(20);
+      expect(result.totalCount).toBeGreaterThanOrEqual(100);
+      expect(result.totalPages).toBeGreaterThanOrEqual(5);
+    });
+
+    it("supports pause, resume, and progress monitoring in TMDBImporter", () => {
+      const importer = new TMDBImporter();
+      expect(importer.isPaused()).toBe(false);
+
+      importer.pause();
+      expect(importer.isPaused()).toBe(true);
+
+      importer.resume();
+      expect(importer.isPaused()).toBe(false);
+
+      const progress = importer.getProgress();
+      expect(progress.status).toBeDefined();
+      expect(progress.moviesImported).toBe(0);
+      expect(progress.percent).toBe(0);
+    });
+
+    it("prevents duplicate record insertion via getItemByProviderId", () => {
+      const existingMovie = CatalogueDatabase.getItemByProviderId("local_pack", "tmdb-27205");
+      expect(existingMovie).toBeDefined();
+      expect(existingMovie?.primaryTitle).toBe("Inception");
+
+      // Non-existent item check
+      const nonexistent = CatalogueDatabase.getItemByProviderId("tmdb", "nonexistent-999999");
+      expect(nonexistent).toBeNull();
     });
   });
 });

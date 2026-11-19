@@ -18,6 +18,7 @@ import { CatalogueClient } from "../lib/catalog/client";
 import { DiscoverCard } from "../components/discover/DiscoverCard";
 import { DiscoverFilters } from "../components/discover/DiscoverFilters";
 import { DiscoverDetailModal } from "../components/discover/DiscoverDetailModal";
+import { CatalogueManagerModal } from "../components/discover/CatalogueManagerModal";
 
 export const DiscoverPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<CatalogMediaType>("movie");
@@ -26,6 +27,7 @@ export const DiscoverPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [selectedItem, setSelectedItem] = useState<MediaCatalogItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isManagerOpen, setIsManagerOpen] = useState<boolean>(false);
 
   const [filters, setFilters] = useState<CatalogFilterOptions>({
     mediaType: "movie",
@@ -133,23 +135,33 @@ export const DiscoverPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Catalogue Info Badges */}
-        {metadata && (
-          <div className="flex items-center gap-2 text-xs text-charcoal-400">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-800">
-              <Database className="w-3.5 h-3.5 text-teal-400" />
-              <span>
-                <strong className="text-charcoal-200">{metadata.totalMovies}</strong> Movies •{" "}
-                <strong className="text-charcoal-200">{metadata.totalSeries}</strong> Series
+        {/* Catalogue Info Badges & Manager Action */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {metadata && (
+            <>
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-800 text-xs text-charcoal-400">
+                <Database className="w-3.5 h-3.5 text-teal-400" />
+                <span>
+                  <strong className="text-charcoal-200">{metadata.totalMovies}</strong> Movies •{" "}
+                  <strong className="text-charcoal-200">{metadata.totalSeries}</strong> Series
+                </span>
               </span>
-            </span>
 
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-800 text-[11px]">
-              <WifiOff className="w-3.5 h-3.5 text-emerald-400" />
-              <span>Local Pack v{metadata.catalogVersion}</span>
-            </span>
-          </div>
-        )}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-800 text-[11px] text-charcoal-400">
+                <WifiOff className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Offline SQLite</span>
+              </span>
+            </>
+          )}
+
+          <button
+            onClick={() => setIsManagerOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition-colors shadow-sm"
+          >
+            <Database className="w-3.5 h-3.5 text-teal-400" />
+            <span>Catalogue Manager</span>
+          </button>
+        </div>
       </div>
 
       {/* Primary Navigation Tabs: Movies vs Series */}
@@ -261,6 +273,18 @@ export const DiscoverPage: React.FC = () => {
           onAddedToWatchlist={() => handleWatchlistUpdated(selectedItem.primaryTitle)}
         />
       )}
+
+      {/* Catalogue Manager Modal */}
+      <CatalogueManagerModal
+        isOpen={isManagerOpen}
+        onClose={() => setIsManagerOpen(false)}
+        onCatalogueUpdated={() => {
+          CatalogueClient.getCatalogMetadata().then((m) => setMetadata(m));
+          CatalogueClient.getCatalogItems({ mediaType: activeTab, ...filters }).then((res) =>
+            setItems(res)
+          );
+        }}
+      />
     </div>
   );
 };
