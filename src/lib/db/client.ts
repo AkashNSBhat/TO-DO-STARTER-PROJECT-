@@ -949,7 +949,7 @@ export class DatabaseClient {
 
   static async createPlanItem(input: CreatePlanItemInput): Promise<PlanItem> {
     if (!this.isTauri()) {
-      const id = `plan-${Date.now()}`;
+      const id = `plan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const itemsInPeriod = this.localData.planItems.filter(
         (p: PlanItem) => p.periodType === input.periodType && p.periodIdentifier === input.periodIdentifier
       );

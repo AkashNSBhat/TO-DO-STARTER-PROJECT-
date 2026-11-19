@@ -240,11 +240,34 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
               <span>Real TMDB Importer Controls</span>
             </h3>
 
-            {/* Language Selector */}
+            {/* Presets & Language Selector */}
             <div>
-              <label className="block text-xs font-medium text-charcoal-400 mb-1.5">
-                Target Languages for Import:
-              </label>
+              <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                <label className="block text-xs font-medium text-charcoal-400">
+                  Target Languages for Import:
+                </label>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLanguages(["en", "hi", "kn", "de"]);
+                      setTargetPerLanguage(1250);
+                    }}
+                    disabled={isRunning}
+                    className="px-2 py-0.5 rounded bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/40 font-semibold cursor-pointer transition-colors"
+                  >
+                    ⭐ Preset: 5,000 Movies & 5,000 Series
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedLanguages(AVAILABLE_LANGUAGES.map((l) => l.code))}
+                    disabled={isRunning}
+                    className="px-2 py-0.5 rounded bg-charcoal-800 hover:bg-charcoal-700 text-charcoal-300 cursor-pointer"
+                  >
+                    Select All (8)
+                  </button>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-1.5">
                 {AVAILABLE_LANGUAGES.map((lang) => {
                   const isSelected = selectedLanguages.includes(lang.code);
@@ -281,9 +304,16 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                   <option value={25}>25 each (Fast Test — ~200 items)</option>
                   <option value={50}>50 each (Balanced — ~400 items)</option>
                   <option value={100}>100 each (Substantial — ~800 items)</option>
-                  <option value={250}>250 each (Deep Catalogue — ~2000 items)</option>
-                  <option value={500}>500 each (Massive Catalogue — ~4000 items)</option>
+                  <option value={250}>250 each (Deep Catalogue — ~2,000 items)</option>
+                  <option value={500}>500 each (Large Catalogue — ~4,000 items)</option>
+                  <option value={625}>625 each (⭐ 5,000 Movies + 5,000 Series across 8 languages)</option>
+                  <option value={1250}>1,250 each (⭐ 5,000 Movies + 5,000 Series across 4 languages)</option>
+                  <option value={2500}>2,500 each (Massive Catalogue — ~20,000 items)</option>
+                  <option value={5000}>5,000 each (Maximum Volume — ~40,000 items)</option>
                 </select>
+                <div className="mt-1 text-[11px] text-teal-400/90 font-medium">
+                  Estimated Run: {selectedLanguages.length * targetPerLanguage} Movies + {selectedLanguages.length * targetPerLanguage} Series across {selectedLanguages.length} language(s)
+                </div>
               </div>
 
               <div>

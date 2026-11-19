@@ -1399,7 +1399,7 @@ export function handleIpcCommand(cmd: string, args: Record<string, any> = {}): a
 
     case "create_plan_item": {
       const input = args.input;
-      const id = `plan-${Date.now()}`;
+      const id = `plan-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const periodItems = activePlanItems.filter(
         (p) => p.periodType === input.periodType && p.periodIdentifier === input.periodIdentifier
       );
