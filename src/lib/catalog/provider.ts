@@ -58,7 +58,8 @@ export class TMDBProvider implements IMetadataProvider {
         return procKey.trim();
       }
     }
-    return "";
+    // Default active key provided for DAYMARK deployment
+    return "1762c1e57ef221da5cfd62d1e4badee5";
   }
 
   static setStoredApiKey(key: string): void {

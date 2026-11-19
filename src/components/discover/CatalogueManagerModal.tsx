@@ -234,6 +234,15 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
             </span>
           </div>
 
+          {/* Baseline pack notice */}
+          {stats.totalMovies <= 150 && (
+            <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-xs text-teal-300 flex items-center justify-between">
+              <span>
+                💡 Currently loaded with the <strong>130 base pack</strong>. Select a preset below and click <strong>Start Importer</strong> to expand to 5,000+ movies & series!
+              </span>
+            </div>
+          )}
+
           {/* Import Configuration Panel */}
           <div className="space-y-3.5 p-4 rounded-xl bg-charcoal-950/70 border border-charcoal-800">
             <h3 className="text-xs font-bold text-charcoal-200 uppercase tracking-wider flex items-center gap-1.5">
