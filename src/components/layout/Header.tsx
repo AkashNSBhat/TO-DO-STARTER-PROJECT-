@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { Search, Bell, Moon, Sun, Settings } from "lucide-react";
+import { Search, Bell, Moon, Sun, Settings, Menu, Smartphone } from "lucide-react";
 import { NavTab } from "./Sidebar";
 import { Theme } from "../../hooks/useTheme";
 import { useSettings } from "../../hooks/useSettings";
@@ -9,6 +9,8 @@ interface HeaderProps {
   theme: Theme;
   onToggleTheme: () => void;
   onOpenSettings: () => void;
+  onToggleMobileMenu?: () => void;
+  onOpenApkModal?: () => void;
 }
 
 const TAB_TITLES: Record<NavTab, { title: string; subtitle: string }> = {
@@ -29,6 +31,8 @@ export const Header: React.FC<HeaderProps> = ({
   theme,
   onToggleTheme,
   onOpenSettings,
+  onToggleMobileMenu,
+  onOpenApkModal,
 }) => {
   const { settings } = useSettings();
   const userName = settings?.user_name || "Vincent";
@@ -54,15 +58,26 @@ export const Header: React.FC<HeaderProps> = ({
   }, []);
 
   return (
-    <header className="h-16 bg-white dark:bg-[#131518] border-b border-slate-200/80 dark:border-[#22252c] px-6 flex items-center justify-between z-10 shrink-0 transition-colors">
-      {/* Left: Personalized Greeting (Exact Figma style) */}
-      <div className="flex items-center gap-3">
+    <header className="h-16 bg-white dark:bg-[#131518] border-b border-slate-200/80 dark:border-[#22252c] px-4 sm:px-6 flex items-center justify-between z-10 shrink-0 transition-colors">
+      {/* Left: Hamburger Menu (Mobile) & Greeting */}
+      <div className="flex items-center gap-2.5 sm:gap-3">
+        {/* Mobile Menu Toggle Button */}
+        <button
+          type="button"
+          onClick={onToggleMobileMenu}
+          className="md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1f2228] transition-colors cursor-pointer"
+          title="Toggle Navigation Menu"
+          aria-label="Toggle Navigation Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <div>
-          <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 tracking-tight">
+          <h1 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 tracking-tight">
             <span>Welcome back, {userName}</span>
-            <span className="text-lg">👋</span>
+            <span className="text-base sm:text-lg">👋</span>
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[180px] sm:max-w-none">
             {TAB_TITLES[currentTab]?.subtitle || "Every day counts. Every completion stays."}
           </p>
         </div>
@@ -86,10 +101,22 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Right Controls: Notifications, Date Pill, Theme, Profile Avatar */}
-      <div className="flex items-center gap-3">
+      {/* Right Controls: APK Demo Pill, Date, Theme, Profile Avatar */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile APK Download Button */}
+        <button
+          type="button"
+          onClick={onOpenApkModal}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/30 transition-all cursor-pointer shadow-2xs hover:scale-105 shrink-0"
+          title="Download Android APK (Demo)"
+        >
+          <Smartphone className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Mobile APK</span>
+          <span className="sm:hidden text-[11px]">APK</span>
+        </button>
+
         {/* Date Pill (Figma style) */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1f2228] border border-slate-200/80 dark:border-[#2c3038] text-xs font-medium text-slate-600 dark:text-slate-300">
+        <div className="hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-[#1f2228] border border-slate-200/80 dark:border-[#2c3038] text-xs font-medium text-slate-600 dark:text-slate-300">
           <span>{formattedDate}</span>
         </div>
 

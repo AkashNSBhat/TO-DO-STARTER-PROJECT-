@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   User,
+  Smartphone,
 } from "lucide-react";
 import { Card } from "../components/common/Card";
 import { Button } from "../components/common/Button";
@@ -428,6 +429,42 @@ export const SettingsPage: React.FC = () => {
             <span className="text-slate-400 block mb-0.5">Architecture</span>
             <span className="text-slate-300">Tauri v2 + SQLite Bundled</span>
           </div>
+        </div>
+      </Card>
+
+      {/* Mobile Companion & Android APK Card */}
+      <Card
+        title="Mobile Companion & Android APK"
+        subtitle="Download the touch-optimized mobile APK preview for Android"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0">
+              <Smartphone className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  DAYMARK Mobile Companion (APK)
+                </h4>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  v0.1.0-preview
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Universal APK build for Android devices. Responsive touch navigation with offline SQLite sync.
+              </p>
+            </div>
+          </div>
+
+          <a
+            href="/downloads/daymark-mobile-preview.apk"
+            download="daymark-mobile-preview.apk"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 transition-all cursor-pointer shrink-0"
+          >
+            <Download className="w-4 h-4" />
+            <span>Download Demo APK</span>
+          </a>
         </div>
       </Card>
 
