@@ -19,7 +19,13 @@ export const App: React.FC = () => {
   const renderContent = () => {
     switch (currentTab) {
       case "dashboard":
-        return <DashboardPage />;
+        return (
+          <DashboardPage
+            onNavigateToTasks={() => setCurrentTab("tasks")}
+            onNavigateToMovies={() => setCurrentTab("movies")}
+            onNavigateToSeries={() => setCurrentTab("series")}
+          />
+        );
       case "tasks":
         return <TasksPage />;
       case "discover":
@@ -39,7 +45,13 @@ export const App: React.FC = () => {
       case "settings":
         return <SettingsPage />;
       default:
-        return <DashboardPage />;
+        return (
+          <DashboardPage
+            onNavigateToTasks={() => setCurrentTab("tasks")}
+            onNavigateToMovies={() => setCurrentTab("movies")}
+            onNavigateToSeries={() => setCurrentTab("series")}
+          />
+        );
     }
   };
 

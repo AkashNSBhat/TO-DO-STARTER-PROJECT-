@@ -16,11 +16,15 @@ import {
 export interface DashboardPageProps {
   initialData?: DashboardData;
   onNavigateToTasks?: () => void;
+  onNavigateToMovies?: () => void;
+  onNavigateToSeries?: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
   initialData,
   onNavigateToTasks,
+  onNavigateToMovies,
+  onNavigateToSeries,
 }) => {
   const {
     data: hookData,
@@ -31,6 +35,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   } = useDashboard();
 
   const data = initialData ?? hookData;
+
+  const handleSelectMetric = (metricId: string) => {
+    if (metricId === "completed-tasks" || metricId === "pending-tasks") {
+      onNavigateToTasks?.();
+    } else if (metricId === "movies-watched") {
+      onNavigateToMovies?.();
+    } else if (metricId === "active-series") {
+      onNavigateToSeries?.();
+    }
+  };
 
   if (loading && !data) {
     return <DashboardSkeleton />;
@@ -78,6 +92,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         pendingTasksToday={data.metrics.pendingTasksToday}
         totalMoviesWatched={data.metrics.totalMoviesWatched}
         activeSeriesCount={data.metrics.activeSeriesCount}
+        onSelectMetric={handleSelectMetric}
       />
 
       {/* 3. Main Multi-Column Grid */}
