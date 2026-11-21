@@ -32,7 +32,7 @@ export const GreetingCard: React.FC<GreetingCardProps> = ({
               DAYMARK
             </span>
             <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-              Offline First • Desktop OS
+              Desktop OS
             </span>
           </div>
 

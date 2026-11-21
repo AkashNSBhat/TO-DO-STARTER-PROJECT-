@@ -77,7 +77,7 @@ export const MetricCards: React.FC<MetricCardsProps> = ({
       progressBarBg: "bg-violet-500",
       detail: "Archived & logged",
       hoverAction: "Explore Movie Tracker",
-      hoverPill: "Offline Library",
+      hoverPill: "Movie Library",
       progressPct: Math.min(100, Math.max(15, totalMoviesWatched * 8)),
     },
     {
