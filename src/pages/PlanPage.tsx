@@ -3,7 +3,6 @@ import {
   CalendarRange,
   Plus,
   CheckCircle2,
-  Circle,
   Film,
   BookOpen,
   Target,
@@ -14,11 +13,13 @@ import {
   ArrowRight,
   ArrowUp,
   ArrowDown,
+  ArrowLeft,
   Edit2,
   Trash2,
   Tag,
   RotateCcw,
   Sparkles,
+  Check,
 } from "lucide-react";
 import { usePlan } from "../hooks";
 import {
@@ -38,13 +39,94 @@ import { ProgressBar } from "../components/common/ProgressBar";
 import { DailyPaperPlanner } from "../components/plan/DailyPaperPlanner";
 import { cn } from "../lib/utils";
 
-interface CategoryColConfig {
+interface HorizonTileConfig {
   key: PlanCategory;
-  title: string;
+  name: string;
+  shortName: string;
+  subtitle: string;
   icon: React.ReactNode;
-  color: string;
-  badgeVariant: "violet" | "teal" | "success" | "amber" | "default";
+  themeColor: string;
+  badgeBg: string;
+  badgeText: string;
+  borderHover: string;
+  gradientBg: string;
+  roundCheckboxChecked: string;
+  accentText: string;
 }
+
+const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
+  {
+    key: "projects",
+    name: "Projects & Deliverables",
+    shortName: "Projects",
+    subtitle: "Tactical milestones & core builds",
+    icon: <Briefcase className="w-6 h-6 text-amber-500" />,
+    themeColor: "amber",
+    badgeBg: "bg-amber-500/10 dark:bg-amber-500/20",
+    badgeText: "text-amber-600 dark:text-amber-400",
+    borderHover: "hover:border-amber-400 dark:hover:border-amber-500 hover:shadow-amber-500/10",
+    gradientBg: "from-amber-500/15 via-orange-500/10 to-transparent",
+    roundCheckboxChecked: "bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30",
+    accentText: "text-amber-600 dark:text-amber-400",
+  },
+  {
+    key: "learning",
+    name: "Learning & Skill Goals",
+    shortName: "Skill Goals",
+    subtitle: "Knowledge acquisition & mastery",
+    icon: <BookOpen className="w-6 h-6 text-teal-500" />,
+    themeColor: "teal",
+    badgeBg: "bg-teal-500/10 dark:bg-teal-500/20",
+    badgeText: "text-teal-600 dark:text-teal-400",
+    borderHover: "hover:border-teal-400 dark:hover:border-teal-500 hover:shadow-teal-500/10",
+    gradientBg: "from-teal-500/15 via-cyan-500/10 to-transparent",
+    roundCheckboxChecked: "bg-teal-500 border-teal-500 text-white shadow-sm shadow-teal-500/30",
+    accentText: "text-teal-600 dark:text-teal-400",
+  },
+  {
+    key: "personal_goals",
+    name: "Personal Goals & Habits",
+    shortName: "Habits & Routines",
+    subtitle: "Daily habits, fitness & routines",
+    icon: <Target className="w-6 h-6 text-emerald-500" />,
+    themeColor: "emerald",
+    badgeBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+    badgeText: "text-emerald-600 dark:text-emerald-400",
+    borderHover: "hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-emerald-500/10",
+    gradientBg: "from-emerald-500/15 via-green-500/10 to-transparent",
+    roundCheckboxChecked: "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30",
+    accentText: "text-emerald-600 dark:text-emerald-400",
+  },
+  {
+    key: "entertainment",
+    name: "Entertainment Queue",
+    shortName: "Entertainment",
+    subtitle: "Movies, series & watchlist goals",
+    icon: <Film className="w-6 h-6 text-violet-500" />,
+    themeColor: "violet",
+    badgeBg: "bg-violet-500/10 dark:bg-violet-500/20",
+    badgeText: "text-violet-600 dark:text-violet-400",
+    borderHover: "hover:border-violet-400 dark:hover:border-violet-500 hover:shadow-violet-500/10",
+    gradientBg: "from-violet-500/15 via-purple-500/10 to-transparent",
+    roundCheckboxChecked: "bg-violet-500 border-violet-500 text-white shadow-sm shadow-violet-500/30",
+    accentText: "text-violet-600 dark:text-violet-400",
+  },
+];
+
+const CUSTOM_TILE_CONFIG: HorizonTileConfig = {
+  key: "custom",
+  name: "Custom Categories",
+  shortName: "Custom",
+  subtitle: "Personalized tags & specialized groups",
+  icon: <Tag className="w-6 h-6 text-pink-500" />,
+  themeColor: "pink",
+  badgeBg: "bg-pink-500/10 dark:bg-pink-500/20",
+  badgeText: "text-pink-600 dark:text-pink-400",
+  borderHover: "hover:border-pink-400 dark:hover:border-pink-500 hover:shadow-pink-500/10",
+  gradientBg: "from-pink-500/15 via-rose-500/10 to-transparent",
+  roundCheckboxChecked: "bg-pink-500 border-pink-500 text-white shadow-sm shadow-pink-500/30",
+  accentText: "text-pink-600 dark:text-pink-400",
+};
 
 export const PlanPage: React.FC = () => {
   const {
@@ -79,6 +161,32 @@ export const PlanPage: React.FC = () => {
   const [jumpInput, setJumpInput] = useState("");
   const [carrySuccessMsg, setCarrySuccessMsg] = useState<string | null>(null);
   const [plannerMode, setPlannerMode] = useState<"daily" | "horizon">("daily");
+  const [activeHorizonTile, setActiveHorizonTile] = useState<PlanCategory | null>(null);
+  const [quickObjectiveTitle, setQuickObjectiveTitle] = useState("");
+
+  // Keyboard shortcut: Esc to return to Horizon Tiles overview
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && activeHorizonTile !== null) {
+        setActiveHorizonTile(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeHorizonTile]);
+
+  // Quick inline add objective for active expanded tile
+  const handleQuickAddObjective = async (category: PlanCategory) => {
+    const title = quickObjectiveTitle.trim();
+    if (!title) return;
+    const colItems = itemsByCategory[category] || [];
+    await createPlanItem({
+      category,
+      title,
+      priorityOrder: colItems.length + 1,
+    });
+    setQuickObjectiveTitle("");
+  };
 
   // Linkable items state
   const [availableTasks, setAvailableTasks] = useState<TaskDetail[]>([]);
@@ -110,37 +218,6 @@ export const PlanPage: React.FC = () => {
         .catch((err) => console.error("Error loading linkable items:", err));
     }
   }, [isAddModalOpen, editingItem]);
-
-  const categoriesConfig: CategoryColConfig[] = [
-    {
-      key: "projects",
-      title: "Projects & Deliverables",
-      icon: <Briefcase className="w-4 h-4 text-amber-400" />,
-      color: "border-amber-500/20 bg-amber-500/5",
-      badgeVariant: "amber",
-    },
-    {
-      key: "learning",
-      title: "Learning & Skills",
-      icon: <BookOpen className="w-4 h-4 text-teal-400" />,
-      color: "border-teal-500/20 bg-teal-500/5",
-      badgeVariant: "teal",
-    },
-    {
-      key: "personal_goals",
-      title: "Personal Goals & Habits",
-      icon: <Target className="w-4 h-4 text-emerald-400" />,
-      color: "border-emerald-500/20 bg-emerald-500/5",
-      badgeVariant: "success",
-    },
-    {
-      key: "entertainment",
-      title: "Entertainment Queue",
-      icon: <Film className="w-4 h-4 text-violet-400" />,
-      color: "border-violet-500/20 bg-violet-500/5",
-      badgeVariant: "violet",
-    },
-  ];
 
   // Open Add Modal
   const openAddModal = (defaultCategory?: PlanCategory) => {
@@ -564,295 +641,368 @@ export const PlanPage: React.FC = () => {
         </div>
       )}
 
-      {/* Main 4 Core Categories Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {categoriesConfig.map((col) => {
-          const colItems = itemsByCategory[col.key];
-          const catProgress = progress.byCategory[col.key];
+      {/* ======================================================== */}
+      {/* HORIZON TILES: POPPING 4-TILE GRID OR EXPANDED CHECKLIST */}
+      {/* ======================================================== */}
+      {!activeHorizonTile ? (
+        <div className="space-y-6">
+          {/* Main 4 Popping Category Tiles (Does not show tasks yet) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {HORIZON_TILES_CONFIG.map((config) => {
+              const catProgress = progress.byCategory[config.key] || {
+                completed: 0,
+                total: 0,
+                percent: 0,
+              };
 
-          return (
-            <div
-              key={col.key}
-              className={cn(
-                "rounded-xl border p-4.5 bg-white dark:bg-charcoal-800/80 transition-all flex flex-col justify-between space-y-3",
-                col.color
-              )}
-            >
-              {/* Category Column Header */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200/60 dark:border-charcoal-700/60">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-charcoal-900/60 border border-charcoal-700">
-                    {col.icon}
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                      {col.title}
-                    </h3>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={col.badgeVariant}>
-                    {catProgress.completed}/{catProgress.total} ({catProgress.percent}%)
-                  </Badge>
-                </div>
-              </div>
+              return (
+                <div
+                  key={config.key}
+                  onClick={() => {
+                    setActiveHorizonTile(config.key);
+                    setQuickObjectiveTitle("");
+                  }}
+                  className={cn(
+                    "group relative p-7 rounded-3xl bg-white dark:bg-[#181a20] border-2 border-slate-200/80 dark:border-[#2b2e38] transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1 overflow-hidden flex flex-col justify-between min-h-[200px]",
+                    config.borderHover
+                  )}
+                >
+                  {/* Glowing Gradient Accent */}
+                  <div
+                    className={cn(
+                      "absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-50 pointer-events-none transition-opacity group-hover:opacity-100 bg-gradient-to-br",
+                      config.gradientBg
+                    )}
+                  />
 
-              {/* Items in Category */}
-              <div className="space-y-2.5 min-h-[140px]">
-                {colItems.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-slate-400 italic">
-                    No objectives queued in {col.title.toLowerCase()}.
-                  </div>
-                ) : (
-                  colItems.map((item, idx) => (
-                    <div
-                      key={item.id}
-                      onClick={() => togglePlanItem(item.id, !item.isCompleted)}
-                      className={cn(
-                        "group p-3 rounded-lg border transition-all cursor-pointer flex items-start justify-between gap-3 select-none",
-                        item.isCompleted
-                          ? "bg-slate-50/60 dark:bg-charcoal-850/60 border-slate-200 dark:border-charcoal-700/60 opacity-60"
-                          : "bg-white dark:bg-charcoal-750 border-slate-200 dark:border-charcoal-600/80 hover:border-teal-500/40 shadow-xs"
-                      )}
-                    >
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        {/* Checkbox */}
-                        <button
-                          type="button"
-                          className={cn(
-                            "w-5 h-5 rounded-full mt-0.5 flex items-center justify-center transition-colors shrink-0",
-                            item.isCompleted
-                              ? "text-emerald-400"
-                              : "text-slate-400 hover:text-teal-400"
-                          )}
-                        >
-                          {item.isCompleted ? (
-                            <CheckCircle2 className="w-5 h-5 fill-emerald-500/20" />
-                          ) : (
-                            <Circle className="w-5 h-5 stroke-[1.5]" />
-                          )}
-                        </button>
-
-                        <div className="space-y-1 flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-charcoal-700 text-slate-500 dark:text-slate-400 font-bold">
-                              #{item.priorityOrder}
-                            </span>
-                            <span
-                              className={cn(
-                                "text-xs font-semibold transition-colors truncate",
-                                item.isCompleted
-                                  ? "line-through text-slate-400 dark:text-slate-500"
-                                  : "text-slate-900 dark:text-slate-100 group-hover:text-teal-400"
-                              )}
-                            >
-                              {item.title}
-                            </span>
-                            {renderLinkPill(item)}
-                          </div>
-
-                          {item.description && (
-                            <p
-                              className={cn(
-                                "text-[11px] leading-relaxed break-words",
-                                item.isCompleted
-                                  ? "text-slate-400 dark:text-slate-500 line-through"
-                                  : "text-slate-500 dark:text-slate-400"
-                              )}
-                            >
-                              {item.description}
-                            </p>
-                          )}
+                  <div className="relative z-10 space-y-4">
+                    {/* Header: Icon, Category Name & Progress Pill */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-13 h-13 rounded-2xl bg-slate-100 dark:bg-charcoal-800 border border-slate-200/70 dark:border-charcoal-700 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform shadow-xs">
+                          {config.icon}
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight group-hover:text-teal-500 dark:group-hover:text-teal-400 transition-colors">
+                            {config.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            {config.subtitle}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Item Actions (Reorder, Edit, Delete) */}
-                      <div
-                        className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={(e) => handleMovePriority(colItems, idx, "up", e)}
-                          disabled={idx === 0}
-                          className="p-1 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                          title="Move up in priority"
-                        >
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => handleMovePriority(colItems, idx, "down", e)}
-                          disabled={idx === colItems.length - 1}
-                          className="p-1 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                          title="Move down in priority"
-                        >
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => openEditModal(item, e)}
-                          className="p-1 rounded text-slate-400 hover:text-teal-400 cursor-pointer"
-                          title="Edit objective"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingItem(item);
-                          }}
-                          className="p-1 rounded text-slate-400 hover:text-red-400 cursor-pointer"
-                          title="Delete objective"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Add quickly to column */}
-              <div className="pt-2 border-t border-slate-200/40 dark:border-charcoal-700/40">
-                <button
-                  onClick={() => openAddModal(col.key)}
-                  className="w-full py-1.5 rounded-lg text-[11px] text-slate-500 dark:text-slate-400 hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-charcoal-700 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Add {col.title} item</span>
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Custom Categories Section (Requirement 6.9) */}
-      {(itemsByCategory.custom.length > 0 || customCategories.length > 0) && (
-        <div className="mt-8 rounded-xl border border-purple-500/20 bg-purple-500/5 p-4.5 space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-purple-500/20">
-            <div className="flex items-center gap-2">
-              <div className="p-1.5 rounded-lg bg-charcoal-900/60 border border-charcoal-700">
-                <Tag className="w-4 h-4 text-purple-400" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  Custom Categories
-                </h3>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                  User-defined plan groups with personalized tags.
-                </p>
-              </div>
-            </div>
-            <Badge variant="violet">
-              {progress.byCategory.custom.completed}/{progress.byCategory.custom.total} Completed
-            </Badge>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {itemsByCategory.custom.map((item, idx) => (
-              <div
-                key={item.id}
-                onClick={() => togglePlanItem(item.id, !item.isCompleted)}
-                className={cn(
-                  "group p-3 rounded-lg border transition-all cursor-pointer flex items-start justify-between gap-3 select-none",
-                  item.isCompleted
-                    ? "bg-slate-50/60 dark:bg-charcoal-850/60 border-slate-200 dark:border-charcoal-700/60 opacity-60"
-                    : "bg-white dark:bg-charcoal-750 border-slate-200 dark:border-charcoal-600/80 hover:border-teal-500/40 shadow-xs"
-                )}
-              >
-                <div className="flex items-start gap-3 flex-1 min-w-0">
-                  <button
-                    type="button"
-                    className={cn(
-                      "w-5 h-5 rounded-full mt-0.5 flex items-center justify-center transition-colors shrink-0",
-                      item.isCompleted
-                        ? "text-emerald-400"
-                        : "text-slate-400 hover:text-teal-400"
-                    )}
-                  >
-                    {item.isCompleted ? (
-                      <CheckCircle2 className="w-5 h-5 fill-emerald-500/20" />
-                    ) : (
-                      <Circle className="w-5 h-5 stroke-[1.5]" />
-                    )}
-                  </button>
-
-                  <div className="space-y-1 flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-charcoal-700 text-slate-500 dark:text-slate-400 font-bold">
-                        #{item.priorityOrder}
-                      </span>
-                      {item.customCategoryName && (
-                        <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                          {item.customCategoryName}
-                        </span>
-                      )}
                       <span
                         className={cn(
-                          "text-xs font-semibold transition-colors truncate",
-                          item.isCompleted
-                            ? "line-through text-slate-400 dark:text-slate-500"
-                            : "text-slate-900 dark:text-slate-100 group-hover:text-teal-400"
+                          "px-3 py-1 rounded-full text-xs font-bold shrink-0 border border-transparent shadow-2xs",
+                          config.badgeBg,
+                          config.badgeText
                         )}
                       >
-                        {item.title}
+                        {catProgress.completed}/{catProgress.total} Done
                       </span>
-                      {renderLinkPill(item)}
+                    </div>
+                  </div>
+
+                  {/* Bottom Footer: Progress Bar & Prompt to Open Checklist */}
+                  <div className="relative z-10 pt-4 mt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
+                    <div className="flex items-center gap-2 flex-1 max-w-[55%]">
+                      <div className="w-full bg-slate-100 dark:bg-charcoal-800 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="h-full bg-teal-500 rounded-full transition-all duration-300"
+                          style={{ width: `${catProgress.percent}%` }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                        {catProgress.percent}%
+                      </span>
                     </div>
 
-                    {item.description && (
-                      <p
-                        className={cn(
-                          "text-[11px] leading-relaxed break-words",
-                          item.isCompleted
-                            ? "text-slate-400 dark:text-slate-500 line-through"
-                            : "text-slate-500 dark:text-slate-400"
-                        )}
-                      >
-                        {item.description}
-                      </p>
-                    )}
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-500 dark:group-hover:text-teal-400 transition-colors">
+                      <span>Open Checklist</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Custom Categories Tile (if any custom items or tags exist) */}
+          {(itemsByCategory.custom.length > 0 || customCategories.length > 0) && (
+            <div
+              onClick={() => {
+                setActiveHorizonTile("custom");
+                setQuickObjectiveTitle("");
+              }}
+              className={cn(
+                "group relative p-6 rounded-3xl bg-white dark:bg-[#181a20] border-2 border-slate-200/80 dark:border-[#2b2e38] transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:-translate-y-1 overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4",
+                CUSTOM_TILE_CONFIG.borderHover
+              )}
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  {CUSTOM_TILE_CONFIG.icon}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      Custom Categories
+                    </h3>
+                    <Badge variant="violet">
+                      {progress.byCategory.custom.completed}/{progress.byCategory.custom.total} Done
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Personalized user-defined categories and goals.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 text-xs font-bold text-pink-500">
+                <span>Open Custom Checklist</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ======================================================== */
+        /* FULL OPENED CHECKLIST VIEW FOR SELECTED HORIZON TILE     */
+        /* ======================================================== */
+        <div className="rounded-3xl bg-white dark:bg-[#181a20] border-2 border-slate-200 dark:border-[#2b2e38] shadow-2xl p-6 sm:p-8 space-y-6 transition-all duration-300 relative overflow-hidden animate-in fade-in zoom-in-95">
+          {(() => {
+            const currentTileConfig =
+              activeHorizonTile === "custom"
+                ? CUSTOM_TILE_CONFIG
+                : HORIZON_TILES_CONFIG.find((t) => t.key === activeHorizonTile) ||
+                  HORIZON_TILES_CONFIG[0];
+            const activeTileItems = activeHorizonTile ? itemsByCategory[activeHorizonTile] || [] : [];
+            const completedCount = activeTileItems.filter((i) => i.isCompleted).length;
+            const tileTotal = activeTileItems.length;
+            const percent = tileTotal > 0 ? Math.round((completedCount / tileTotal) * 100) : 0;
+
+            return (
+              <>
+                {/* Top Banner Accent */}
+                <div
+                  className={cn(
+                    "absolute top-0 left-0 right-0 h-2 bg-gradient-to-r",
+                    currentTileConfig.gradientBg,
+                    "opacity-90"
+                  )}
+                />
+
+                {/* Back Button & Header Navigation */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setActiveHorizonTile(null)}
+                      className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-charcoal-800 dark:hover:bg-charcoal-700 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-105"
+                      title="Return to 4 Horizon Tiles (Esc)"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Back to Horizon Tiles</span>
+                    </button>
+
+                    <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                      Press <kbd className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-charcoal-700 text-[10px] font-sans border border-slate-200 dark:border-charcoal-600">Esc</kbd> to return
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Badge variant="teal">
+                      {completedCount} of {tileTotal} Achieved ({percent}%)
+                    </Badge>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => openAddModal(activeHorizonTile)}
+                      icon={<Plus className="w-3.5 h-3.5" />}
+                    >
+                      New Objective
+                    </Button>
                   </div>
                 </div>
 
-                <div
-                  className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={(e) => handleMovePriority(itemsByCategory.custom, idx, "up", e)}
-                    disabled={idx === 0}
-                    className="p-1 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                    title="Move up in priority"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => handleMovePriority(itemsByCategory.custom, idx, "down", e)}
-                    disabled={idx === itemsByCategory.custom.length - 1}
-                    className="p-1 rounded text-slate-400 hover:text-slate-200 disabled:opacity-20 cursor-pointer"
-                    title="Move down in priority"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => openEditModal(item, e)}
-                    className="p-1 rounded text-slate-400 hover:text-teal-400 cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingItem(item);
-                    }}
-                    className="p-1 rounded text-slate-400 hover:text-red-400 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                {/* Category Header Hero */}
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-charcoal-800 border border-slate-200/80 dark:border-charcoal-700 flex items-center justify-center shrink-0 shadow-sm">
+                    {currentTileConfig.icon}
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
+                      {currentTileConfig.name}
+                    </h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      {currentTileConfig.subtitle} &bull; Cycle:{" "}
+                      <span className="text-teal-500 font-semibold">{periodDisplayName}</span>
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+
+                {/* Objectives Checklist with Round Checkboxes */}
+                <div className="space-y-3 min-h-[220px]">
+                  {activeTileItems.length === 0 ? (
+                    <div className="p-10 text-center rounded-2xl border-2 border-dashed border-slate-200 dark:border-charcoal-700 space-y-3">
+                      <div className="w-12 h-12 rounded-full mx-auto bg-slate-100 dark:bg-charcoal-800 flex items-center justify-center text-slate-400">
+                        <Target className="w-6 h-6" />
+                      </div>
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        No objectives queued in {currentTileConfig.name} yet.
+                      </p>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Add high-impact targets or sync directly from your movie, series, or daily task trackers.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAddModal(activeHorizonTile)}
+                        icon={<Plus className="w-3.5 h-3.5" />}
+                      >
+                        Queue First Objective
+                      </Button>
+                    </div>
+                  ) : (
+                    activeTileItems.map((item, idx) => (
+                      <div
+                        key={item.id}
+                        onClick={() => togglePlanItem(item.id, !item.isCompleted)}
+                        className={cn(
+                          "group p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-start justify-between gap-3 select-none",
+                          item.isCompleted
+                            ? "bg-slate-50/70 dark:bg-charcoal-850/60 border-slate-200/70 dark:border-charcoal-700/60 opacity-60"
+                            : "bg-white dark:bg-charcoal-800 border-slate-200/80 dark:border-charcoal-700 hover:border-teal-400 dark:hover:border-teal-500 shadow-xs hover:shadow-md"
+                        )}
+                      >
+                        <div className="flex items-start gap-3.5 flex-1 min-w-0">
+                          {/* Round Circular Checkbox */}
+                          <div
+                            className={cn(
+                              "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all duration-150 cursor-pointer shadow-xs",
+                              item.isCompleted
+                                ? currentTileConfig.roundCheckboxChecked
+                                : "border-slate-300 dark:border-slate-600 bg-transparent hover:border-teal-400 hover:scale-105"
+                            )}
+                          >
+                            {item.isCompleted && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                          </div>
+
+                          <div className="space-y-1 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 dark:bg-charcoal-700 text-slate-500 dark:text-slate-400 font-bold">
+                                #{item.priorityOrder}
+                              </span>
+                              {item.customCategoryName && (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-pink-500/10 text-pink-500 border border-pink-500/20">
+                                  {item.customCategoryName}
+                                </span>
+                              )}
+                              <span
+                                className={cn(
+                                  "text-sm font-bold transition-colors truncate",
+                                  item.isCompleted
+                                    ? "line-through text-slate-400 dark:text-slate-500"
+                                    : "text-slate-900 dark:text-slate-100 group-hover:text-teal-400"
+                                )}
+                              >
+                                {item.title}
+                              </span>
+                              {renderLinkPill(item)}
+                            </div>
+
+                            {item.description && (
+                              <p
+                                className={cn(
+                                  "text-xs leading-relaxed break-words",
+                                  item.isCompleted
+                                    ? "text-slate-400 dark:text-slate-500 line-through"
+                                    : "text-slate-600 dark:text-slate-400"
+                                )}
+                              >
+                                {item.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Item Actions (Reorder, Edit, Delete) */}
+                        <div
+                          className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            onClick={(e) => handleMovePriority(activeTileItems, idx, "up", e)}
+                            disabled={idx === 0}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-700 disabled:opacity-20 cursor-pointer"
+                            title="Move up in priority"
+                          >
+                            <ArrowUp className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => handleMovePriority(activeTileItems, idx, "down", e)}
+                            disabled={idx === activeTileItems.length - 1}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-charcoal-700 disabled:opacity-20 cursor-pointer"
+                            title="Move down in priority"
+                          >
+                            <ArrowDown className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => openEditModal(item, e)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-slate-100 dark:hover:bg-charcoal-700 cursor-pointer"
+                            title="Edit objective"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingItem(item);
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-100 dark:hover:bg-charcoal-700 cursor-pointer"
+                            title="Delete objective"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Quick Add Objective Input Bar */}
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleQuickAddObjective(activeHorizonTile);
+                    }}
+                    className="flex items-center gap-2"
+                  >
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        value={quickObjectiveTitle}
+                        onChange={(e) => setQuickObjectiveTitle(e.target.value)}
+                        placeholder={`+ Add a new objective in ${currentTileConfig.name} (Press Enter)...`}
+                        className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-charcoal-800 border border-slate-200 dark:border-charcoal-700 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:border-teal-500 transition-colors"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="md"
+                      disabled={!quickObjectiveTitle.trim()}
+                      icon={<Plus className="w-4 h-4" />}
+                    >
+                      Add
+                    </Button>
+                  </form>
+                </div>
+              </>
+            );
+          })()}
         </div>
       )}
     </div>
