@@ -377,10 +377,10 @@ export const PlanPage: React.FC = () => {
                 : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
             )}
           >
-            <Edit2 className="w-3.5 h-3.5 text-pink-500" />
-            <span>Daily Planner Sheet</span>
-            <span className="px-2 py-0.5 rounded-full text-[10px] bg-pink-100 text-pink-700 dark:bg-pink-950/60 dark:text-pink-300 font-bold">
-              Notepad
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Daily 4-Tile Planner</span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 font-bold">
+              Popping Tiles
             </span>
           </button>
 
