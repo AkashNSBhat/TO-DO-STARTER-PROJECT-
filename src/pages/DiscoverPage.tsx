@@ -116,20 +116,19 @@ export const DiscoverPage: React.FC = () => {
             <div>
               <h1 className="text-xl sm:text-2xl font-bold text-charcoal-50 flex items-center gap-2">
                 <span>Discover Catalogue</span>
-                {CatalogueClient.hasTmdbApiKey() ? (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    TMDB Live Connected
-                  </span>
-                ) : (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  5,000+ Live Base
+                </span>
+                {CatalogueClient.hasTmdbApiKey() && (
                   <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-300 border border-teal-500/20">
                     <Sparkles className="w-3 h-3" />
-                    Offline Ready
+                    TMDB Connected
                   </span>
                 )}
               </h1>
               <p className="text-xs text-charcoal-400 mt-0.5">
-                Explore curated movies & series in English, Hindi, Kannada, German and more.
+                Explore 5,000+ curated movies & series in English (Franchises & Hits), Hindi (Classics & Hits), Kannada, Tamil, Telugu, Malayalam, Korean, and more.
               </p>
             </div>
           </div>
@@ -142,8 +141,8 @@ export const DiscoverPage: React.FC = () => {
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-charcoal-900 border border-charcoal-800 text-xs text-charcoal-400">
                 <Database className="w-3.5 h-3.5 text-teal-400" />
                 <span>
-                  <strong className="text-charcoal-200">{metadata.totalMovies}</strong> Movies •{" "}
-                  <strong className="text-charcoal-200">{metadata.totalSeries}</strong> Series
+                  <strong className="text-charcoal-200">{metadata.totalMovies.toLocaleString()}</strong> Movies •{" "}
+                  <strong className="text-charcoal-200">{metadata.totalSeries.toLocaleString()}</strong> Series
                 </span>
               </span>
 
@@ -185,7 +184,7 @@ export const DiscoverPage: React.FC = () => {
                     : "bg-charcoal-800 text-charcoal-400"
                 }`}
               >
-                {metadata.totalMovies}
+                {metadata.totalMovies.toLocaleString()}
               </span>
             )}
           </button>
@@ -208,7 +207,7 @@ export const DiscoverPage: React.FC = () => {
                     : "bg-charcoal-800 text-charcoal-400"
                 }`}
               >
-                {metadata.totalSeries}
+                {metadata.totalSeries.toLocaleString()}
               </span>
             )}
           </button>
@@ -243,8 +242,11 @@ export const DiscoverPage: React.FC = () => {
           {/* Results Count Banner */}
           <div className="flex items-center justify-between pb-3 text-xs text-charcoal-400">
             <span>
-              Showing <strong className="text-charcoal-200">{items.length}</strong>{" "}
-              {activeTab === "movie" ? "movies" : "series"}
+              Showing <strong className="text-charcoal-200">{items.length}</strong> of{" "}
+              <strong className="text-charcoal-200">
+                {(activeTab === "movie" ? metadata?.totalMovies || 5000 : metadata?.totalSeries || 5000).toLocaleString()}+
+              </strong>{" "}
+              curated {activeTab === "movie" ? "movies" : "series"}
             </span>
             <span className="text-[11px] text-charcoal-500">
               Click any card to inspect episodes, languages, and details

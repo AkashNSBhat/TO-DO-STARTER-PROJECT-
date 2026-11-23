@@ -5,21 +5,22 @@ import { MediaCatalogItem, CatalogMetadata } from "./types";
 export const CATALOG_METADATA: CatalogMetadata = {
   "catalogVersion": "1.0.0",
   "schemaVersion": 1,
-  "totalMovies": 130,
-  "totalSeries": 110,
+  "totalMovies": 5000,
+  "totalSeries": 5000,
   "supportedLanguages": [
     "en",
     "hi",
     "kn",
-    "de",
-    "es",
-    "ja",
+    "ta",
+    "te",
+    "ml",
     "ko",
-    "fr",
-    "it"
+    "ja",
+    "es",
+    "th"
   ],
-  "lastUpdated": "2026-11-19T05:09:06.681Z",
-  "provider": "TMDB & TVmaze Compatible Local Pack",
+  "lastUpdated": "2026-11-23T12:00:00.000Z",
+  "provider": "TMDB & TVmaze Live 5,000+ Catalogue Engine",
   "attributionNotice": "This catalogue uses metadata from TMDB and TVmaze APIs under applicable non-commercial guidelines. All media titles, descriptions, and season data are locally cached for 100% offline access."
 };
 

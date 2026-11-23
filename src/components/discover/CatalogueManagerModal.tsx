@@ -166,7 +166,7 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                 <span>Movies</span>
               </div>
               <span className="text-lg font-bold text-charcoal-50 font-mono">
-                {stats.totalMovies}
+                {stats.totalMovies.toLocaleString()}
               </span>
             </div>
 
@@ -176,7 +176,7 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                 <span>Series</span>
               </div>
               <span className="text-lg font-bold text-charcoal-50 font-mono">
-                {stats.totalSeries}
+                {stats.totalSeries.toLocaleString()}
               </span>
             </div>
 
@@ -186,7 +186,7 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
                 <span>Seasons & Eps</span>
               </div>
               <span className="text-xs font-semibold text-charcoal-200 font-mono pt-1">
-                {stats.totalSeasons} S • {stats.totalEpisodes} Eps
+                {stats.totalSeasons.toLocaleString()} S • {stats.totalEpisodes.toLocaleString()} Eps
               </span>
             </div>
 
