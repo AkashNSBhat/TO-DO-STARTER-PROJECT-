@@ -1,6 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 
+const outDir = path.join(__dirname, "..", "public", "downloads");
+const apkPath = path.join(outDir, "daymark-mobile-preview.apk");
+
+if (fs.existsSync(apkPath) && fs.statSync(apkPath).size > 100000) {
+  console.log(`[APK] Verified signed Android package already exists (${(fs.statSync(apkPath).size / 1024 / 1024).toFixed(2)} MB): ${apkPath}`);
+  process.exit(0);
+}
+
 function createSimpleZip(entries, outPath) {
   const fileBuffers = [];
   const centralDirBuffers = [];
