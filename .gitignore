@@ -21,6 +21,8 @@ src-tauri/Cargo.lock.bak
 *.db-shm
 *.db-wal
 *.keystore
+*.idsig
+scripts/*.jar
 
 # Editor directories and files
 .vscode/*
