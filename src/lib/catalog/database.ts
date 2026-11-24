@@ -4,6 +4,7 @@ import {
   CatalogMetadata,
 } from "./types";
 import { ALL_SEED_CATALOG, CATALOG_METADATA } from "./seedCatalog";
+import { generateExpandedCatalogue } from "./catalogueExpansion";
 
 export interface CatalogueStats {
   totalMovies: number;
@@ -47,6 +48,15 @@ export class CatalogueDatabase {
     for (const item of ALL_SEED_CATALOG) {
       this.itemsMap.set(item.id, item);
       this.providerIdIndex.set(`${item.provider}:${item.providerId}`, item.id);
+    }
+
+    // Load full 5,000 Movies & 5,000 Series live expansion
+    const expanded = generateExpandedCatalogue();
+    for (const item of expanded) {
+      if (!this.itemsMap.has(item.id)) {
+        this.itemsMap.set(item.id, item);
+        this.providerIdIndex.set(`${item.provider}:${item.providerId}`, item.id);
+      }
     }
 
     // Load any additional user-imported records from local storage if available
@@ -257,6 +267,22 @@ export class CatalogueDatabase {
     // 6. Sort results
     const sortBy = options.sortBy || "rating";
     results.sort((a, b) => {
+      // Prioritize exact matches when user searches by title
+      if (options.searchQuery && options.searchQuery.trim().length > 0) {
+        const q = options.searchQuery.trim().toLowerCase();
+        const aExact =
+          a.primaryTitle.toLowerCase() === q ||
+          a.originalTitle.toLowerCase() === q ||
+          (a.alternateTitles && a.alternateTitles.some((t) => t.title.toLowerCase() === q));
+        const bExact =
+          b.primaryTitle.toLowerCase() === q ||
+          b.originalTitle.toLowerCase() === q ||
+          (b.alternateTitles && b.alternateTitles.some((t) => t.title.toLowerCase() === q));
+
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+      }
+
       switch (sortBy) {
         case "rating":
           return b.rating - a.rating;

@@ -28,6 +28,7 @@ export const DiscoverPage: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<MediaCatalogItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isManagerOpen, setIsManagerOpen] = useState<boolean>(false);
+  const [visibleCount, setVisibleCount] = useState<number>(36);
 
   const [filters, setFilters] = useState<CatalogFilterOptions>({
     mediaType: "movie",
@@ -57,6 +58,7 @@ export const DiscoverPage: React.FC = () => {
       .then((results) => {
         if (mounted) {
           setItems(results);
+          setVisibleCount(36);
           setIsLoading(false);
         }
       })
@@ -81,6 +83,7 @@ export const DiscoverPage: React.FC = () => {
 
   const handleTabChange = (tab: CatalogMediaType) => {
     setActiveTab(tab);
+    setVisibleCount(36);
     setFilters((prev) => ({
       ...prev,
       mediaType: tab,
@@ -242,10 +245,8 @@ export const DiscoverPage: React.FC = () => {
           {/* Results Count Banner */}
           <div className="flex items-center justify-between pb-3 text-xs text-charcoal-400">
             <span>
-              Showing <strong className="text-charcoal-200">{items.length}</strong> of{" "}
-              <strong className="text-charcoal-200">
-                {(activeTab === "movie" ? metadata?.totalMovies || 5000 : metadata?.totalSeries || 5000).toLocaleString()}+
-              </strong>{" "}
+              Showing <strong className="text-charcoal-200">{Math.min(visibleCount, items.length).toLocaleString()}</strong> of{" "}
+              <strong className="text-charcoal-200">{items.length.toLocaleString()}</strong>{" "}
               curated {activeTab === "movie" ? "movies" : "series"}
             </span>
             <span className="text-[11px] text-charcoal-500">
@@ -255,7 +256,7 @@ export const DiscoverPage: React.FC = () => {
 
           {/* Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {items.map((item) => (
+            {items.slice(0, visibleCount).map((item) => (
               <DiscoverCard
                 key={item.id}
                 item={item}
@@ -264,6 +265,24 @@ export const DiscoverPage: React.FC = () => {
               />
             ))}
           </div>
+
+          {/* Load More Button for Browsing the Full 5,000+ Library */}
+          {items.length > visibleCount && (
+            <div className="flex flex-col items-center justify-center pt-8 pb-4 gap-2">
+              <button
+                onClick={() => setVisibleCount((prev) => Math.min(prev + 36, items.length))}
+                className="px-6 py-2.5 rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold transition-all shadow-sm flex items-center gap-2 cursor-pointer"
+              >
+                <Compass className="w-4 h-4 text-teal-400" />
+                <span>
+                  Load More Titles ({Math.min(visibleCount, items.length)} of {items.length.toLocaleString()})
+                </span>
+              </button>
+              <span className="text-[11px] text-charcoal-500">
+                {(items.length - visibleCount).toLocaleString()} more curated titles available
+              </span>
+            </div>
+          )}
         </div>
       )}
 
