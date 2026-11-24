@@ -1,5 +1,5 @@
 import React from "react";
-import { Download, Smartphone, CheckCircle2, ShieldCheck } from "lucide-react";
+import { Download, Smartphone, CheckCircle2, ShieldCheck, ExternalLink } from "lucide-react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 
@@ -10,6 +10,7 @@ interface ApkDownloadModalProps {
 
 export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onClose }) => {
   const apkDownloadUrl = "/downloads/daymark-mobile-preview.apk";
+  const githubMirrorUrl = "https://raw.githubusercontent.com/AkashNSBhat/TO-DO-STARTER-PROJECT-/main/public/downloads/daymark-mobile-preview.apk";
 
   return (
     <Modal
@@ -21,12 +22,21 @@ export const ApkDownloadModal: React.FC<ApkDownloadModalProps> = ({ isOpen, onCl
       footer={
         <div className="flex items-center justify-between w-full">
           <span className="text-[11px] text-slate-500 dark:text-slate-400">
-            v0.1.0-preview &bull; Universal APK
+            v0.1.0 &bull; Universal APK (3.75 MB)
           </span>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>
               Close
             </Button>
+            <a
+              href={githubMirrorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-charcoal-700 dark:hover:bg-charcoal-600 text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>GitHub Mirror</span>
+            </a>
             <a
               href={apkDownloadUrl}
               download="daymark-mobile-preview.apk"

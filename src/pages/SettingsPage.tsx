@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   User,
   Smartphone,
+  ExternalLink,
 } from "lucide-react";
 import { Card } from "../components/common/Card";
 import { Button } from "../components/common/Button";
@@ -457,14 +458,25 @@ export const SettingsPage: React.FC = () => {
             </div>
           </div>
 
-          <a
-            href="/downloads/daymark-mobile-preview.apk"
-            download="daymark-mobile-preview.apk"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 transition-all cursor-pointer shrink-0"
-          >
-            <Download className="w-4 h-4" />
-            <span>Download Demo APK</span>
-          </a>
+          <div className="flex items-center gap-2 shrink-0">
+            <a
+              href="https://raw.githubusercontent.com/AkashNSBhat/TO-DO-STARTER-PROJECT-/main/public/downloads/daymark-mobile-preview.apk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-200 hover:bg-slate-300 dark:bg-charcoal-700 dark:hover:bg-charcoal-600 text-slate-800 dark:text-slate-100 transition-all cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>GitHub Mirror</span>
+            </a>
+            <a
+              href="/downloads/daymark-mobile-preview.apk"
+              download="daymark-mobile-preview.apk"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 transition-all cursor-pointer"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download APK</span>
+            </a>
+          </div>
         </div>
       </Card>
 
