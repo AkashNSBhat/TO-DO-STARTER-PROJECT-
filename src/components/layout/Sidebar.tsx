@@ -117,8 +117,8 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Media Categories",
         items: [
-          { label: "Movies Catalogue", count: 130, active: true },
-          { label: "Series & Shows", count: 110 },
+          { label: "Movies Catalogue", count: "5,000+", active: true },
+          { label: "Series & Shows", count: "5,000+" },
         ],
       },
       {

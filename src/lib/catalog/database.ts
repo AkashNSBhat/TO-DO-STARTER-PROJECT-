@@ -4,7 +4,6 @@ import {
   CatalogMetadata,
 } from "./types";
 import { ALL_SEED_CATALOG, CATALOG_METADATA } from "./seedCatalog";
-import { generateExpandedCatalogue } from "./catalogueExpansion";
 
 export interface CatalogueStats {
   totalMovies: number;
@@ -48,15 +47,6 @@ export class CatalogueDatabase {
     for (const item of ALL_SEED_CATALOG) {
       this.itemsMap.set(item.id, item);
       this.providerIdIndex.set(`${item.provider}:${item.providerId}`, item.id);
-    }
-
-    // Load full 5,000 Movies & 5,000 Series live expansion
-    const expanded = generateExpandedCatalogue();
-    for (const item of expanded) {
-      if (!this.itemsMap.has(item.id)) {
-        this.itemsMap.set(item.id, item);
-        this.providerIdIndex.set(`${item.provider}:${item.providerId}`, item.id);
-      }
     }
 
     // Load any additional user-imported records from local storage if available

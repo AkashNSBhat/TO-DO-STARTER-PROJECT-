@@ -235,13 +235,11 @@ export const CatalogueManagerModal: React.FC<CatalogueManagerModalProps> = ({
           </div>
 
           {/* Baseline pack notice */}
-          {stats.totalMovies <= 150 && (
-            <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-xs text-teal-300 flex items-center justify-between">
-              <span>
-                💡 Currently loaded with the <strong>130 base pack</strong>. Select a preset below and click <strong>Start Importer</strong> to expand to 5,000+ movies & series!
-              </span>
-            </div>
-          )}
+          <div className="p-3 rounded-xl bg-teal-500/10 border border-teal-500/30 text-xs text-teal-300 flex items-center justify-between">
+            <span>
+              💡 Curated offline baseline pack loaded. Select languages below and click <strong>Start Importer</strong> to discover and import live titles from TMDB into your local library!
+            </span>
+          </div>
 
           {/* Import Configuration Panel */}
           <div className="space-y-3.5 p-4 rounded-xl bg-charcoal-950/70 border border-charcoal-800">
