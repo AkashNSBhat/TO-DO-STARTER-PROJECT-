@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   LayoutGrid,
   CheckSquare,
@@ -57,7 +57,12 @@ const DRAWER_SECTIONS: Record<
     title: string;
     groups: Array<{
       title?: string;
-      items: Array<{ label: string; count?: string | number; active?: boolean }>;
+      items: Array<{
+        label: string;
+        count?: string | number;
+        active?: boolean;
+        subtitle?: string;
+      }>;
     }>;
   }
 > = {
@@ -67,16 +72,37 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Workspace",
         items: [
-          { label: "Today's Agenda", count: 6, active: true },
-          { label: "Habit Streak", count: "14d" },
-          { label: "Media Progress", count: 3 },
+          {
+            label: "Today's Agenda",
+            count: 6,
+            active: true,
+            subtitle: "6 items scheduled • 2 due soon",
+          },
+          {
+            label: "Habit Streak",
+            count: "14d",
+            subtitle: "14-day active streak • Best run",
+          },
+          {
+            label: "Media Progress",
+            count: 3,
+            subtitle: "3 active • 2 series, 1 movie",
+          },
         ],
       },
       {
         title: "Quick Access",
         items: [
-          { label: "Priority Tasks", count: 2 },
-          { label: "Watching Next", count: 1 },
+          {
+            label: "Priority Tasks",
+            count: 2,
+            subtitle: "2 high-priority tasks pending",
+          },
+          {
+            label: "Watching Next",
+            count: 1,
+            subtitle: "1 title queued in watchlist",
+          },
         ],
       },
     ],
@@ -275,7 +301,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   dbPingMs,
 }) => {
   const [activeSubItem, setActiveSubItem] = useState<string>("In progress");
+  const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
+  const [hoveredWaveY, setHoveredWaveY] = useState<number>(140);
+  const drawerAsideRef = useRef<HTMLElement | null>(null);
   const drawerData = DRAWER_SECTIONS[currentTab];
+
+  useEffect(() => {
+    setHoveredItemIndex(null);
+  }, [currentTab]);
 
   return (
     <div className="flex h-screen select-none z-20 shrink-0">
@@ -360,81 +393,179 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </aside>
 
       {/* ========================================================= */}
-      {/* 2. CONTEXTUAL DRAWER (Expandable Middle Column)            */}
+      {/* 2. CONTEXTUAL DRAWER (Wave-Reactive Expandable Column)    */}
       {/* ========================================================= */}
-      {!collapsed && (
-        <aside className="w-60 h-screen bg-white dark:bg-[#191b20] border-r border-slate-200 dark:border-[#282c35] flex flex-col justify-between transition-all duration-200 shrink-0">
-          <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {/* Top Drawer Title with Action */}
-            <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-                {drawerData.title}
-              </h2>
-              <button
-                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
-                title="Quick Add"
+      {!collapsed && (() => {
+        let runningFlatIndex = 0;
+        const isWaveActive = hoveredItemIndex !== null;
+
+        return (
+          <aside
+            ref={drawerAsideRef}
+            onMouseLeave={() => setHoveredItemIndex(null)}
+            className="relative w-60 h-screen bg-white dark:bg-[#191b20] border-r border-slate-200 dark:border-[#282c35] flex flex-col justify-between transition-all duration-300 shrink-0 overflow-visible z-30"
+          >
+            {/* Dynamic Right-Edge SVG Wave Crest that follows hovered item */}
+            <div
+              aria-hidden="true"
+              style={{
+                top: `${Math.max(24, hoveredWaveY - 90)}px`,
+                transform: isWaveActive ? "scaleX(1)" : "scaleX(0)",
+              }}
+              className={cn(
+                "pointer-events-none absolute -right-[30px] w-[31px] h-[180px] origin-left z-20 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                isWaveActive ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <svg
+                viewBox="0 0 36 180"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                className="w-full h-full drop-shadow-[4px_0_12px_rgba(20,184,166,0.18)]"
               >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
+                <path
+                  d="M0 0 C2 42, 32 56, 32 90 C32 124, 2 138, 0 180 L0 0 Z"
+                  className="fill-white dark:fill-[#191b20]"
+                />
+                <path
+                  d="M0 0 C2 42, 32 56, 32 90 C32 124, 2 138, 0 180"
+                  strokeWidth="1.5"
+                  className="stroke-blue-400/50 dark:stroke-teal-400/50"
+                />
+              </svg>
             </div>
 
-            {/* Tree Navigation Groups */}
-            <div className="space-y-5">
-              {drawerData.groups.map((group, gIdx) => (
-                <div key={gIdx} className="space-y-1.5">
-                  {group.title && (
-                    <div className="flex items-center justify-between px-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                      <span>{group.title}</span>
-                      <ChevronDown className="w-3 h-3 text-slate-400" />
-                    </div>
-                  )}
+            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-6">
+              {/* Top Drawer Title with Action */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                  {drawerData.title}
+                </h2>
+                <button
+                  className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Quick Add"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
 
-                  <div className="space-y-0.5 relative pl-1">
-                    {/* Subtle hierarchy guideline */}
-                    <div className="absolute left-2.5 top-2 bottom-2 w-px bg-slate-200 dark:bg-slate-800" />
+              {/* Wave-Reactive Navigation Groups */}
+              <div className="space-y-5">
+                {drawerData.groups.map((group, gIdx) => (
+                  <div key={gIdx} className="space-y-1.5">
+                    {group.title && (
+                      <div className="flex items-center justify-between px-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        <span>{group.title}</span>
+                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                      </div>
+                    )}
 
-                    {group.items.map((it, idx) => {
-                      const isSelected = activeSubItem === it.label || (!activeSubItem && it.active);
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setActiveSubItem(it.label)}
-                          className={cn(
-                            "w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium transition-all relative z-10 cursor-pointer text-left",
-                            isSelected
-                              ? "bg-slate-100 dark:bg-[#252830] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
-                              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                          )}
-                        >
-                          <span className="truncate">{it.label}</span>
-                          {it.count !== undefined && (
-                            <span
+                    <div className="space-y-1 relative pl-1">
+                      {/* Subtle hierarchy guideline */}
+                      <div className="absolute left-2.5 top-2 bottom-2 w-px bg-slate-200 dark:bg-slate-800" />
+
+                      {group.items.map((it, idx) => {
+                        const flatIdx = runningFlatIndex++;
+                        const isSelected =
+                          activeSubItem === it.label || (!activeSubItem && it.active);
+                        const distance =
+                          hoveredItemIndex !== null
+                            ? Math.abs(flatIdx - hoveredItemIndex)
+                            : null;
+                        const isHovered = distance === 0;
+                        const isNearWave = distance === 1;
+                        const isOuterWave = distance === 2;
+
+                        const expandedSubtitle =
+                          it.subtitle ||
+                          (it.count !== undefined
+                            ? `${it.count} items • Click to focus`
+                            : "Quick view • Click to open");
+
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setActiveSubItem(it.label)}
+                            onMouseEnter={(e) => {
+                              setHoveredItemIndex(flatIdx);
+                              const asideRect =
+                                drawerAsideRef.current?.getBoundingClientRect();
+                              const btnRect = e.currentTarget.getBoundingClientRect();
+                              if (asideRect) {
+                                setHoveredWaveY(
+                                  btnRect.top - asideRect.top + btnRect.height / 2
+                                );
+                              }
+                            }}
+                            className={cn(
+                              "w-full flex flex-col px-3 rounded-xl text-xs font-medium relative cursor-pointer text-left origin-left transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                              isHovered
+                                ? "z-30 py-3 translate-x-4 scale-[1.07] rounded-2xl bg-gradient-to-r from-blue-50 via-teal-50/90 to-indigo-50 dark:from-[#212b3d] dark:via-[#1b2e3b] dark:to-[#242b42] text-blue-700 dark:text-teal-300 border border-blue-400/50 dark:border-teal-400/45 shadow-[0_10px_28px_-6px_rgba(20,184,166,0.32)]"
+                                : isNearWave
+                                  ? "z-20 py-2 translate-x-2 scale-[1.025] bg-slate-100/80 dark:bg-[#232732] text-slate-900 dark:text-slate-100 shadow-sm"
+                                  : isOuterWave
+                                    ? "z-10 py-1.5 translate-x-1 scale-[1.008] text-slate-700 dark:text-slate-300"
+                                    : isSelected
+                                      ? "z-10 py-1.5 bg-slate-100 dark:bg-[#252830] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
+                                      : "z-10 py-1.5 text-slate-600 dark:text-slate-400"
+                            )}
+                          >
+                            <div className="w-full flex items-center justify-between">
+                              <span
+                                className={cn(
+                                  "truncate transition-all duration-300",
+                                  isHovered && "font-bold text-[13px] tracking-tight"
+                                )}
+                              >
+                                {it.label}
+                              </span>
+                              {it.count !== undefined && (
+                                <span
+                                  className={cn(
+                                    "text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5 transition-all duration-300",
+                                    isHovered
+                                      ? "bg-blue-500/15 dark:bg-teal-400/20 text-blue-700 dark:text-teal-300 scale-110"
+                                      : isSelected
+                                        ? "bg-blue-500/10 text-blue-500 dark:text-blue-400"
+                                        : "text-slate-400 dark:text-slate-500"
+                                  )}
+                                >
+                                  ({it.count})
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Big Wave Expanded Detail Row */}
+                            <div
                               className={cn(
-                                "text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5",
-                                isSelected
-                                  ? "bg-blue-500/10 text-blue-500 dark:text-blue-400"
-                                  : "text-slate-400 dark:text-slate-500"
+                                "overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                                isHovered
+                                  ? "max-h-10 opacity-100 mt-1.5"
+                                  : "max-h-0 opacity-0 mt-0"
                               )}
                             >
-                              ({it.count})
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
+                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600/85 dark:text-teal-300/85">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-teal-400 animate-pulse shrink-0" />
+                                <span className="truncate">{expandedSubtitle}</span>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Drawer Footer Branding */}
-          <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">DAYMARK</span>
-            <span>v0.1.0</span>
-          </div>
-        </aside>
-      )}
+            {/* Drawer Footer Branding */}
+            <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+              <span className="font-semibold text-slate-700 dark:text-slate-300">DAYMARK</span>
+              <span>v0.1.0</span>
+            </div>
+          </aside>
+        );
+      })()}
     </div>
   );
 };
