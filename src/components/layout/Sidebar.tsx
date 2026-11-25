@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   LayoutGrid,
   CheckSquare,
@@ -15,6 +15,12 @@ import {
   Plus,
   ChevronDown,
   Compass,
+  CalendarClock,
+  Flame,
+  Clapperboard,
+  Zap,
+  PlayCircle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -62,6 +68,8 @@ const DRAWER_SECTIONS: Record<
         count?: string | number;
         active?: boolean;
         subtitle?: string;
+        icon?: React.ComponentType<{ className?: string }>;
+        targetTab?: NavTab;
       }>;
     }>;
   }
@@ -77,16 +85,22 @@ const DRAWER_SECTIONS: Record<
             count: 6,
             active: true,
             subtitle: "6 items scheduled • 2 due soon",
+            icon: CalendarClock,
+            targetTab: "plan",
           },
           {
             label: "Habit Streak",
             count: "14d",
             subtitle: "14-day active streak • Best run",
+            icon: Flame,
+            targetTab: "statistics",
           },
           {
             label: "Media Progress",
             count: 3,
             subtitle: "3 active • 2 series, 1 movie",
+            icon: Clapperboard,
+            targetTab: "series",
           },
         ],
       },
@@ -97,11 +111,15 @@ const DRAWER_SECTIONS: Record<
             label: "Priority Tasks",
             count: 2,
             subtitle: "2 high-priority tasks pending",
+            icon: Zap,
+            targetTab: "tasks",
           },
           {
             label: "Watching Next",
             count: 1,
             subtitle: "1 title queued in watchlist",
+            icon: PlayCircle,
+            targetTab: "discover",
           },
         ],
       },
@@ -300,10 +318,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   dbConnected,
   dbPingMs,
 }) => {
-  const [activeSubItem, setActiveSubItem] = useState<string>("In progress");
+  const [activeSubItem, setActiveSubItem] = useState<string>("Today's Agenda");
   const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
-  const [hoveredWaveY, setHoveredWaveY] = useState<number>(140);
-  const drawerAsideRef = useRef<HTMLElement | null>(null);
   const drawerData = DRAWER_SECTIONS[currentTab];
 
   useEffect(() => {
@@ -393,55 +409,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </aside>
 
       {/* ========================================================= */}
-      {/* 2. CONTEXTUAL DRAWER (Wave-Reactive Expandable Column)    */}
+      {/* 2. CONTEXTUAL DRAWER (Contained Inside-Box Wave Sidebar)  */}
       {/* ========================================================= */}
       {!collapsed && (() => {
         let runningFlatIndex = 0;
-        const isWaveActive = hoveredItemIndex !== null;
 
         return (
           <aside
-            ref={drawerAsideRef}
             onMouseLeave={() => setHoveredItemIndex(null)}
-            className="relative w-60 h-screen bg-white dark:bg-[#191b20] border-r border-slate-200 dark:border-[#282c35] flex flex-col justify-between transition-all duration-300 shrink-0 overflow-visible z-30"
+            className="relative w-60 h-screen bg-white dark:bg-[#191b20] border-r border-slate-200 dark:border-[#282c35] flex flex-col justify-between transition-all duration-300 shrink-0 overflow-hidden z-20"
           >
-            {/* Dynamic Right-Edge SVG Wave Crest that follows hovered item */}
-            <div
-              aria-hidden="true"
-              style={{
-                top: `${Math.max(24, hoveredWaveY - 90)}px`,
-                transform: isWaveActive ? "scaleX(1)" : "scaleX(0)",
-              }}
-              className={cn(
-                "pointer-events-none absolute -right-[30px] w-[31px] h-[180px] origin-left z-20 transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
-                isWaveActive ? "opacity-100" : "opacity-0"
-              )}
-            >
-              <svg
-                viewBox="0 0 36 180"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-full h-full drop-shadow-[4px_0_12px_rgba(20,184,166,0.18)]"
-              >
-                <path
-                  d="M0 0 C2 42, 32 56, 32 90 C32 124, 2 138, 0 180 L0 0 Z"
-                  className="fill-white dark:fill-[#191b20]"
-                />
-                <path
-                  d="M0 0 C2 42, 32 56, 32 90 C32 124, 2 138, 0 180"
-                  strokeWidth="1.5"
-                  className="stroke-blue-400/50 dark:stroke-teal-400/50"
-                />
-              </svg>
-            </div>
-
-            <div className="flex-1 overflow-y-auto overflow-x-visible p-4 space-y-6">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-5">
               {/* Top Drawer Title with Action */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
-                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                   {drawerData.title}
                 </h2>
                 <button
+                  onClick={() => onSelectTab("tasks")}
                   className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
                   title="Quick Add"
                 >
@@ -449,21 +434,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               </div>
 
-              {/* Wave-Reactive Navigation Groups */}
-              <div className="space-y-5">
+              {/* Contained Wave-Reactive Navigation Groups */}
+              <div className="space-y-4">
                 {drawerData.groups.map((group, gIdx) => (
-                  <div key={gIdx} className="space-y-1.5">
+                  <div key={gIdx} className="space-y-1">
                     {group.title && (
-                      <div className="flex items-center justify-between px-2 text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                      <div className="flex items-center justify-between px-2 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                         <span>{group.title}</span>
                         <ChevronDown className="w-3 h-3 text-slate-400" />
                       </div>
                     )}
 
-                    <div className="space-y-1 relative pl-1">
-                      {/* Subtle hierarchy guideline */}
-                      <div className="absolute left-2.5 top-2 bottom-2 w-px bg-slate-200 dark:bg-slate-800" />
-
+                    <div className="space-y-1 relative">
                       {group.items.map((it, idx) => {
                         const flatIdx = runningFlatIndex++;
                         const isSelected =
@@ -475,59 +457,102 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         const isHovered = distance === 0;
                         const isNearWave = distance === 1;
                         const isOuterWave = distance === 2;
+                        const ItemIcon = it.icon || Sparkles;
 
                         const expandedSubtitle =
                           it.subtitle ||
                           (it.count !== undefined
-                            ? `${it.count} items • Click to focus`
-                            : "Quick view • Click to open");
+                            ? `${it.count} items • Click to open`
+                            : "Click to open");
 
                         return (
                           <button
                             key={idx}
-                            onClick={() => setActiveSubItem(it.label)}
-                            onMouseEnter={(e) => {
-                              setHoveredItemIndex(flatIdx);
-                              const asideRect =
-                                drawerAsideRef.current?.getBoundingClientRect();
-                              const btnRect = e.currentTarget.getBoundingClientRect();
-                              if (asideRect) {
-                                setHoveredWaveY(
-                                  btnRect.top - asideRect.top + btnRect.height / 2
-                                );
+                            type="button"
+                            onClick={() => {
+                              setActiveSubItem(it.label);
+                              if (it.targetTab) {
+                                onSelectTab(it.targetTab);
                               }
                             }}
+                            onMouseEnter={() => setHoveredItemIndex(flatIdx)}
                             className={cn(
-                              "w-full flex flex-col px-3 rounded-xl text-xs font-medium relative cursor-pointer text-left origin-left transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                              "w-full flex flex-col rounded-xl relative overflow-hidden cursor-pointer text-left transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                               isHovered
-                                ? "z-30 py-3 translate-x-4 scale-[1.07] rounded-2xl bg-gradient-to-r from-blue-50 via-teal-50/90 to-indigo-50 dark:from-[#212b3d] dark:via-[#1b2e3b] dark:to-[#242b42] text-blue-700 dark:text-teal-300 border border-blue-400/50 dark:border-teal-400/45 shadow-[0_10px_28px_-6px_rgba(20,184,166,0.32)]"
+                                ? "py-3 px-3 bg-gradient-to-br from-blue-500/12 via-teal-500/12 to-indigo-500/15 dark:from-[#1f2c3f] dark:via-[#1a2f3d] dark:to-[#222840] border border-blue-400/45 dark:border-teal-400/45 shadow-md shadow-teal-500/10"
                                 : isNearWave
-                                  ? "z-20 py-2 translate-x-2 scale-[1.025] bg-slate-100/80 dark:bg-[#232732] text-slate-900 dark:text-slate-100 shadow-sm"
+                                  ? "py-2 px-3 pl-3.5 bg-slate-100/75 dark:bg-[#222631] text-slate-800 dark:text-slate-100"
                                   : isOuterWave
-                                    ? "z-10 py-1.5 translate-x-1 scale-[1.008] text-slate-700 dark:text-slate-300"
+                                    ? "py-1.5 px-2.5 pl-3 text-slate-600 dark:text-slate-300"
                                     : isSelected
-                                      ? "z-10 py-1.5 bg-slate-100 dark:bg-[#252830] text-blue-600 dark:text-blue-400 font-semibold shadow-xs"
-                                      : "z-10 py-1.5 text-slate-600 dark:text-slate-400"
+                                      ? "py-1.5 px-2.5 bg-slate-100/80 dark:bg-[#22252e] text-blue-600 dark:text-blue-400"
+                                      : "py-1.5 px-2.5 text-slate-500 dark:text-slate-400"
                             )}
                           >
-                            <div className="w-full flex items-center justify-between">
-                              <span
-                                className={cn(
-                                  "truncate transition-all duration-300",
-                                  isHovered && "font-bold text-[13px] tracking-tight"
-                                )}
+                            {/* Internal Wave Backdrop SVG strictly inside the item box */}
+                            {isHovered && (
+                              <svg
+                                aria-hidden="true"
+                                viewBox="0 0 220 64"
+                                preserveAspectRatio="none"
+                                className="pointer-events-none absolute inset-0 w-full h-full opacity-45 dark:opacity-35"
                               >
-                                {it.label}
-                              </span>
+                                <path
+                                  d="M0 44 Q 55 18, 110 38 T 220 26 L 220 64 L 0 64 Z"
+                                  className="fill-blue-400/25 dark:fill-teal-400/25"
+                                />
+                                <path
+                                  d="M0 52 Q 70 28, 140 46 T 220 38 L 220 64 L 0 64 Z"
+                                  className="fill-indigo-400/20 dark:fill-blue-400/20"
+                                />
+                              </svg>
+                            )}
+
+                            <div className="relative z-10 w-full flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className={cn(
+                                    "rounded-lg flex items-center justify-center shrink-0 transition-all duration-300",
+                                    isHovered
+                                      ? "w-7 h-7 bg-blue-500/15 dark:bg-teal-400/20 text-blue-600 dark:text-teal-300 scale-110"
+                                      : isNearWave
+                                        ? "w-6 h-6 bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-200 scale-105"
+                                        : isSelected
+                                          ? "w-5 h-5 bg-blue-500/10 text-blue-500 dark:text-blue-400"
+                                          : "w-5 h-5 bg-slate-100 dark:bg-slate-800/70 text-slate-400 dark:text-slate-500"
+                                  )}
+                                >
+                                  <ItemIcon
+                                    className={cn(
+                                      "transition-all duration-300",
+                                      isHovered ? "w-4 h-4" : "w-3 h-3"
+                                    )}
+                                  />
+                                </span>
+
+                                <span
+                                  className={cn(
+                                    "truncate transition-all duration-300",
+                                    isHovered
+                                      ? "text-[13px] font-bold text-blue-700 dark:text-teal-300 tracking-tight"
+                                      : isNearWave
+                                        ? "text-xs font-semibold text-slate-800 dark:text-slate-200"
+                                        : "text-[11px] font-medium"
+                                  )}
+                                >
+                                  {it.label}
+                                </span>
+                              </div>
+
                               {it.count !== undefined && (
                                 <span
                                   className={cn(
-                                    "text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-1.5 transition-all duration-300",
+                                    "font-semibold px-1.5 py-0.5 rounded-full shrink-0 transition-all duration-300",
                                     isHovered
-                                      ? "bg-blue-500/15 dark:bg-teal-400/20 text-blue-700 dark:text-teal-300 scale-110"
+                                      ? "text-[11px] bg-blue-500/15 dark:bg-teal-400/20 text-blue-700 dark:text-teal-300"
                                       : isSelected
-                                        ? "bg-blue-500/10 text-blue-500 dark:text-blue-400"
-                                        : "text-slate-400 dark:text-slate-500"
+                                        ? "text-[10px] bg-blue-500/10 text-blue-500 dark:text-blue-400"
+                                        : "text-[10px] text-slate-400 dark:text-slate-500"
                                   )}
                                 >
                                   ({it.count})
@@ -535,16 +560,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               )}
                             </div>
 
-                            {/* Big Wave Expanded Detail Row */}
+                            {/* Big Wave Expanded Detail Row inside the box */}
                             <div
                               className={cn(
-                                "overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+                                "relative z-10 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                                 isHovered
-                                  ? "max-h-10 opacity-100 mt-1.5"
-                                  : "max-h-0 opacity-0 mt-0"
+                                  ? "max-h-10 opacity-100 mt-1.5 pl-9"
+                                  : "max-h-0 opacity-0 mt-0 pl-7"
                               )}
                             >
-                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600/85 dark:text-teal-300/85">
+                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600/85 dark:text-teal-300/90">
                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-teal-400 animate-pulse shrink-0" />
                                 <span className="truncate">{expandedSubtitle}</span>
                               </div>
