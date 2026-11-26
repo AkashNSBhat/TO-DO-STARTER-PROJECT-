@@ -78,6 +78,8 @@ interface TileConfig {
   gradientBg: string;
   roundCheckboxChecked: string;
   accentText: string;
+  buttonHoverText: string;
+  buttonStroke: string;
 }
 
 const TILE_CONFIGS: Record<TileId, TileConfig> = {
@@ -94,6 +96,8 @@ const TILE_CONFIGS: Record<TileId, TileConfig> = {
     gradientBg: "from-amber-500/10 via-orange-500/5 to-transparent",
     roundCheckboxChecked: "bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30",
     accentText: "text-amber-600 dark:text-amber-400",
+    buttonHoverText: "hover:text-amber-600 dark:hover:text-amber-400",
+    buttonStroke: "stroke-amber-500 dark:stroke-amber-400",
   },
   schedule: {
     id: "schedule",
@@ -108,6 +112,8 @@ const TILE_CONFIGS: Record<TileId, TileConfig> = {
     gradientBg: "from-blue-500/10 via-indigo-500/5 to-transparent",
     roundCheckboxChecked: "bg-blue-500 border-blue-500 text-white shadow-sm shadow-blue-500/30",
     accentText: "text-blue-600 dark:text-blue-400",
+    buttonHoverText: "hover:text-blue-600 dark:hover:text-blue-400",
+    buttonStroke: "stroke-blue-500 dark:stroke-blue-400",
   },
   tomorrow: {
     id: "tomorrow",
@@ -122,6 +128,8 @@ const TILE_CONFIGS: Record<TileId, TileConfig> = {
     gradientBg: "from-emerald-500/10 via-teal-500/5 to-transparent",
     roundCheckboxChecked: "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30",
     accentText: "text-emerald-600 dark:text-emerald-400",
+    buttonHoverText: "hover:text-emerald-600 dark:hover:text-emerald-400",
+    buttonStroke: "stroke-emerald-500 dark:stroke-emerald-400",
   },
   dontForget: {
     id: "dontForget",
@@ -136,6 +144,8 @@ const TILE_CONFIGS: Record<TileId, TileConfig> = {
     gradientBg: "from-violet-500/10 via-pink-500/5 to-transparent",
     roundCheckboxChecked: "bg-violet-500 border-violet-500 text-white shadow-sm shadow-violet-500/30",
     accentText: "text-violet-600 dark:text-violet-400",
+    buttonHoverText: "hover:text-violet-600 dark:hover:text-violet-400",
+    buttonStroke: "stroke-violet-500 dark:stroke-violet-400",
   },
 };
 
@@ -484,7 +494,13 @@ export const DailyPaperPlanner: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="group/btn relative px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-[#222631] flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
+                    <div
+                      className={cn(
+                        "group/btn relative px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors duration-200",
+                        config.badgeBg,
+                        config.buttonHoverText
+                      )}
+                    >
                       <svg
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
@@ -499,7 +515,10 @@ export const DailyPaperPlanner: React.FC = () => {
                           strokeWidth="1.75"
                           strokeDasharray="100"
                           style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                          className="stroke-blue-500 dark:stroke-blue-400 [stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                          className={cn(
+                            "[stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out",
+                            config.buttonStroke
+                          )}
                         />
                       </svg>
                       <span className="relative z-10">Open Checklist</span>

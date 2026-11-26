@@ -52,6 +52,8 @@ interface HorizonTileConfig {
   gradientBg: string;
   roundCheckboxChecked: string;
   accentText: string;
+  buttonHoverText: string;
+  buttonStroke: string;
 }
 
 const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
@@ -68,6 +70,8 @@ const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
     gradientBg: "from-amber-500/15 via-orange-500/10 to-transparent",
     roundCheckboxChecked: "bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30",
     accentText: "text-amber-600 dark:text-amber-400",
+    buttonHoverText: "hover:text-amber-600 dark:hover:text-amber-400",
+    buttonStroke: "stroke-amber-500 dark:stroke-amber-400",
   },
   {
     key: "learning",
@@ -82,6 +86,8 @@ const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
     gradientBg: "from-teal-500/15 via-cyan-500/10 to-transparent",
     roundCheckboxChecked: "bg-teal-500 border-teal-500 text-white shadow-sm shadow-teal-500/30",
     accentText: "text-teal-600 dark:text-teal-400",
+    buttonHoverText: "hover:text-teal-600 dark:hover:text-teal-400",
+    buttonStroke: "stroke-teal-500 dark:stroke-teal-400",
   },
   {
     key: "personal_goals",
@@ -96,6 +102,8 @@ const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
     gradientBg: "from-emerald-500/15 via-green-500/10 to-transparent",
     roundCheckboxChecked: "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30",
     accentText: "text-emerald-600 dark:text-emerald-400",
+    buttonHoverText: "hover:text-emerald-600 dark:hover:text-emerald-400",
+    buttonStroke: "stroke-emerald-500 dark:stroke-emerald-400",
   },
   {
     key: "entertainment",
@@ -110,6 +118,8 @@ const HORIZON_TILES_CONFIG: HorizonTileConfig[] = [
     gradientBg: "from-violet-500/15 via-purple-500/10 to-transparent",
     roundCheckboxChecked: "bg-violet-500 border-violet-500 text-white shadow-sm shadow-violet-500/30",
     accentText: "text-violet-600 dark:text-violet-400",
+    buttonHoverText: "hover:text-violet-600 dark:hover:text-violet-400",
+    buttonStroke: "stroke-violet-500 dark:stroke-violet-400",
   },
 ];
 
@@ -126,6 +136,8 @@ const CUSTOM_TILE_CONFIG: HorizonTileConfig = {
   gradientBg: "from-pink-500/15 via-rose-500/10 to-transparent",
   roundCheckboxChecked: "bg-pink-500 border-pink-500 text-white shadow-sm shadow-pink-500/30",
   accentText: "text-pink-600 dark:text-pink-400",
+  buttonHoverText: "hover:text-pink-600 dark:hover:text-pink-400",
+  buttonStroke: "stroke-pink-500 dark:stroke-pink-400",
 };
 
 export const PlanPage: React.FC = () => {
@@ -718,7 +730,13 @@ export const PlanPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="group/btn relative px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-[#222631] flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-teal-600 dark:hover:text-teal-300 transition-colors duration-200">
+                    <div
+                      className={cn(
+                        "group/btn relative px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors duration-200",
+                        config.badgeBg,
+                        config.buttonHoverText
+                      )}
+                    >
                       <svg
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
@@ -733,7 +751,10 @@ export const PlanPage: React.FC = () => {
                           strokeWidth="1.75"
                           strokeDasharray="100"
                           style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                          className="stroke-teal-500 dark:stroke-teal-400 [stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                          className={cn(
+                            "[stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out",
+                            config.buttonStroke
+                          )}
                         />
                       </svg>
                       <span className="relative z-10">Open Checklist</span>
@@ -776,7 +797,13 @@ export const PlanPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="group/btn relative px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-[#222631] flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-pink-600 dark:hover:text-pink-400 transition-colors duration-200">
+              <div
+                className={cn(
+                  "group/btn relative px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors duration-200",
+                  CUSTOM_TILE_CONFIG.badgeBg,
+                  CUSTOM_TILE_CONFIG.buttonHoverText
+                )}
+              >
                 <svg
                   aria-hidden="true"
                   className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
@@ -791,7 +818,10 @@ export const PlanPage: React.FC = () => {
                     strokeWidth="1.75"
                     strokeDasharray="100"
                     style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                    className="stroke-pink-500 dark:stroke-pink-400 [stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                    className={cn(
+                      "[stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out",
+                      CUSTOM_TILE_CONFIG.buttonStroke
+                    )}
                   />
                 </svg>
                 <span className="relative z-10">Open Custom Checklist</span>
