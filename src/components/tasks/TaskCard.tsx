@@ -6,7 +6,6 @@ import {
   Edit2,
   Trash2,
   ChevronDown,
-  ChevronUp,
   Plus,
   X,
   CheckCircle2,
@@ -162,11 +161,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           : "bg-white dark:bg-[#21242b] border-slate-200/90 dark:border-[#2c3038] hover:border-blue-400/50 dark:hover:border-slate-700 shadow-sm hover:shadow-md"
       )}
     >
-      <div className="p-4 space-y-3">
-        {/* Top Header: Title, Category/Project Subtitle, Menu */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="pt-0.5">
+      <div className="px-4 py-3">
+        {/* Compact Default Row: Checkbox + Title + Right Dropdown Button */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="shrink-0">
               <CircularCheckbox
                 checked={task.isCompleted}
                 onToggle={(checked) => onToggle(task.id, checked)}
@@ -174,7 +173,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               />
             </div>
 
-            <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="min-w-0 flex-1 text-left cursor-pointer"
+            >
               <h4
                 className={cn(
                   "text-sm font-semibold truncate transition-colors tracking-tight",
@@ -185,125 +188,139 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               >
                 {task.title}
               </h4>
-              <p className="text-xs text-slate-400 dark:text-slate-400 truncate mt-0.5 font-medium">
-                {task.categoryName || "General Task"}
-                {task.description && ` • ${task.description}`}
-              </p>
-            </div>
-          </div>
-
-          {/* Three dots menu button */}
-          <div className="relative shrink-0">
-            <button
-              onClick={() => setShowMenu(!showMenu)}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              title="More options"
-            >
-              <MoreHorizontal className="w-4 h-4" />
             </button>
-
-            {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-white dark:bg-[#1a1c22] border border-slate-200 dark:border-[#2c3038] shadow-xl py-1 z-30 animate-fadeIn">
-                {onEdit && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      onEdit(task);
-                    }}
-                    className="w-full px-3 py-1.5 text-xs text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-blue-500" />
-                    Edit Task
-                  </button>
-                )}
-                {onDelete && (
-                  <button
-                    onClick={() => {
-                      setShowMenu(false);
-                      onDelete(task);
-                    }}
-                    className="w-full px-3 py-1.5 text-xs text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                    Delete
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ======================================================= */}
-        {/* The Signature Figma Progress Bar                        */}
-        {/* ======================================================= */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-400 font-medium">
-            <span className="flex items-center gap-1.5">
-              <ListTodo className="w-3.5 h-3.5 text-slate-400" />
-              <span>Progress</span>
-            </span>
-            <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
-              {progressRatioText}
-            </span>
           </div>
 
-          {/* Progress Bar Track with Vibrant Orange or Green Fill */}
-          <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-300",
-                task.isCompleted
-                  ? "bg-[#22c55e]" // Vibrant Neon Lime when done
-                  : "bg-[#ff783e]" // Warm Tangerine Orange when in progress
-              )}
-              style={{ width: `${Math.max(8, progressPercent)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Footer Meta Row: Date Pill, Priority Flag, Subtasks Drawer Toggle */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80">
-          <div className="flex items-center gap-2">
-            {/* Date Pill (Figma style) */}
-            {task.dueDate && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border select-none",
-                  isOverdue
-                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20"
-                    : isToday
-                    ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20"
-                    : "bg-slate-50 dark:bg-[#1a1c22] text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-[#2c3038]"
-                )}
-              >
-                <Calendar className="w-3 h-3 text-slate-400" />
-                <span>{isToday ? "Today" : task.dueDate}</span>
-              </span>
-            )}
-
-            {/* Priority flag */}
-            {renderPriorityBadge(task.priority)}
-          </div>
-
-          {/* Subtask Count Pill / Expand Toggle */}
+          {/* Right Dropdown Button */}
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
+            aria-expanded={isExpanded}
             className={cn(
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer",
+              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all cursor-pointer",
               isExpanded
-                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20"
-                : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+                ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800"
             )}
-            title="Toggle Subtask Checklist"
+            title={isExpanded ? "Collapse task details" : "Expand task details"}
           >
-            <span>{totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks}` : "Checklist"}</span>
-            {isExpanded ? (
-              <ChevronUp className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronDown className="w-3.5 h-3.5" />
-            )}
+            <ChevronDown
+              className={cn(
+                "w-4 h-4 transition-transform duration-200",
+                isExpanded && "rotate-180"
+              )}
+            />
           </button>
+        </div>
+
+        {/* Collapsible Details Section (Hidden at rest, opens on click) */}
+        <div
+          className={cn(
+            "overflow-hidden transition-all duration-200 ease-out",
+            isExpanded
+              ? "max-h-[500px] opacity-100 mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-3"
+              : "max-h-0 opacity-0 pointer-events-none"
+          )}
+        >
+          {/* Category, Description & Actions Menu */}
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-xs text-slate-400 dark:text-slate-400 font-medium">
+              {task.categoryName || "General Task"}
+              {task.description && ` • ${task.description}`}
+            </p>
+
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowMenu(!showMenu)}
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                title="More options"
+              >
+                <MoreHorizontal className="w-4 h-4" />
+              </button>
+
+              {showMenu && (
+                <div className="absolute right-0 top-full mt-1 w-32 rounded-xl bg-white dark:bg-[#1a1c22] border border-slate-200 dark:border-[#2c3038] shadow-xl py-1 z-30 animate-fadeIn">
+                  {onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onEdit(task);
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-left text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-blue-500" />
+                      Edit Task
+                    </button>
+                  )}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowMenu(false);
+                        onDelete(task);
+                      }}
+                      className="w-full px-3 py-1.5 text-xs text-left text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      Delete
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-slate-400 dark:text-slate-400 font-medium">
+              <span className="flex items-center gap-1.5">
+                <ListTodo className="w-3.5 h-3.5 text-slate-400" />
+                <span>Progress</span>
+              </span>
+              <span className="font-mono font-semibold text-slate-700 dark:text-slate-300 text-[11px]">
+                {progressRatioText}
+              </span>
+            </div>
+
+            <div className="w-full h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-300",
+                  task.isCompleted ? "bg-[#22c55e]" : "bg-[#ff783e]"
+                )}
+                style={{ width: `${Math.max(8, progressPercent)}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Meta Row: Date Pill & Priority Flag */}
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              {task.dueDate && (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border select-none",
+                    isOverdue
+                      ? "bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-500/20"
+                      : isToday
+                      ? "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-500/20"
+                      : "bg-slate-50 dark:bg-[#1a1c22] text-slate-600 dark:text-slate-400 border-slate-200/80 dark:border-[#2c3038]"
+                  )}
+                >
+                  <Calendar className="w-3 h-3 text-slate-400" />
+                  <span>{isToday ? "Today" : task.dueDate}</span>
+                </span>
+              )}
+
+              {renderPriorityBadge(task.priority)}
+            </div>
+
+            <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+              {totalSubtasks > 0 ? `${completedSubtasks}/${totalSubtasks} subtasks` : "No subtasks"}
+            </span>
+          </div>
         </div>
       </div>
 
