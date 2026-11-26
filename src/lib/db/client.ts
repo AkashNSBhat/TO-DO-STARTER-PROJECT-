@@ -180,15 +180,21 @@ export class DatabaseClient {
     });
   }
 
+  private static getLocalTodayStr(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
   private static filterFallbackTasks(filter: TaskFilter): TaskDetail[] {
     const all: TaskDetail[] = this.localData.tasks;
+    const today = this.getLocalTodayStr();
     switch (filter) {
       case "today":
-        return all.filter((t) => t.dueDate === "2026-11-16" || (!t.isCompleted && (t.dueDate ? t.dueDate <= "2026-11-16" : false)));
+        return all.filter((t) => t.dueDate === today || (!t.isCompleted && (t.dueDate ? t.dueDate <= today : false)));
       case "upcoming":
-        return all.filter((t) => !t.isCompleted && t.dueDate && t.dueDate > "2026-11-16");
+        return all.filter((t) => !t.isCompleted && t.dueDate && t.dueDate > today);
       case "overdue":
-        return all.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < "2026-11-16");
+        return all.filter((t) => !t.isCompleted && t.dueDate && t.dueDate < today);
       case "completed":
         return all.filter((t) => t.isCompleted);
       case "all":
@@ -215,7 +221,7 @@ export class DatabaseClient {
 
   static async createTask(input: CreateTaskInput): Promise<TaskDetail> {
     if (!this.isTauri()) {
-      const id = `task-${Date.now()}`;
+      const id = `task-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
       const subtasksCount = input.subtasks?.length ?? 0;
       const categories: CategoryDetail[] = await this.getTaskCategories();
       const cat = categories.find((c) => c.id === input.categoryId) || categories[0];

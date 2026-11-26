@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -31,7 +31,7 @@ export interface TaskModalProps {
 const getOffsetIsoDate = (daysOffset = 0): string => {
   const date = new Date();
   date.setDate(date.getDate() + daysOffset);
-  return date.toISOString().split("T")[0];
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
 
 export const TaskModal: React.FC<TaskModalProps> = ({
@@ -54,8 +54,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [titleError, setTitleError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
+    submittingRef.current = false;
     setStep(1);
     if (taskToEdit) {
       setTitle(taskToEdit.title);
@@ -100,6 +102,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
 
   const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (submittingRef.current) return;
     if (!title.trim()) {
       setTitleError("Task title is required");
       setStep(1);
@@ -107,6 +110,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
     }
 
     try {
+      submittingRef.current = true;
       setIsSubmitting(true);
       if (isEditing && taskToEdit) {
         const updatePayload: UpdateTaskInput = {
@@ -131,6 +135,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({
       }
       onClose();
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

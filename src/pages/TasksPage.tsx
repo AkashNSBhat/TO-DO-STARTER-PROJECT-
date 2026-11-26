@@ -82,19 +82,22 @@ export const TasksPage: React.FC<TasksPageProps> = ({
     setTaskToDelete(task);
   };
 
+  const now = new Date();
+  const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
   const displayTasks = initialTasks
     ? initialTasks.filter((t) => {
         if (filter === "all") return true;
         if (filter === "completed") return t.isCompleted;
         if (filter === "today")
           return (
-            t.dueDate === "2026-11-16" ||
-            (!t.isCompleted && t.dueDate && t.dueDate <= "2026-11-16")
+            t.dueDate === localToday ||
+            (!t.isCompleted && t.dueDate && t.dueDate <= localToday)
           );
         if (filter === "upcoming")
-          return !t.isCompleted && t.dueDate && t.dueDate > "2026-11-16";
+          return !t.isCompleted && t.dueDate && t.dueDate > localToday;
         if (filter === "overdue")
-          return !t.isCompleted && t.dueDate && t.dueDate < "2026-11-16";
+          return !t.isCompleted && t.dueDate && t.dueDate < localToday;
         return true;
       })
     : filteredTasks;

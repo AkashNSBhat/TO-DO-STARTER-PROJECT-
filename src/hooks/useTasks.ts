@@ -26,7 +26,8 @@ export function useTasks(initialFilter: TaskFilter = "today") {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const todayStr = "2026-11-16";
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
   const fetchAllData = useCallback(async () => {
     try {
@@ -83,7 +84,9 @@ export function useTasks(initialFilter: TaskFilter = "today") {
     async (input: CreateTaskInput): Promise<TaskDetail | null> => {
       try {
         const created = await DatabaseClient.createTask(input);
-        setTasks((prev) => [created, ...prev]);
+        setTasks((prev) =>
+          prev.some((t) => t.id === created.id) ? prev : [created, ...prev]
+        );
         return created;
       } catch (err) {
         console.error("[useTasks] Error creating task:", err);
