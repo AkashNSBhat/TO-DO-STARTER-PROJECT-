@@ -484,15 +484,24 @@ export const DailyPaperPlanner: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="relative overflow-hidden px-3 py-1.5 rounded-full border border-transparent group-hover:border-blue-500/45 dark:group-hover:border-blue-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-all duration-300">
-                      <span
+                    <div className="relative px-3.5 py-1.5 rounded-full group-hover:bg-blue-500/8 dark:group-hover:bg-blue-400/10 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors duration-300">
+                      <svg
                         aria-hidden="true"
-                        className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-blue-500/12 via-teal-500/15 to-blue-500/20 dark:from-blue-400/15 dark:via-teal-400/20 dark:to-blue-400/20 transition-all duration-300 ease-out"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-blue-500 to-teal-400 transition-all duration-300 ease-out"
-                      />
+                        className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+                      >
+                        <rect
+                          x="1"
+                          y="1"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          pathLength={100}
+                          strokeWidth="1.75"
+                          strokeDasharray="100"
+                          style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
+                          className="stroke-blue-500 dark:stroke-blue-400 [stroke-dashoffset:100] group-hover:[stroke-dashoffset:0] opacity-0 group-hover:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                        />
+                      </svg>
                       <span className="relative z-10">Open Checklist</span>
                       <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>

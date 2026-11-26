@@ -718,15 +718,24 @@ export const PlanPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="relative overflow-hidden px-3 py-1.5 rounded-full border border-transparent group-hover:border-teal-500/45 dark:group-hover:border-teal-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-all duration-300">
-                      <span
+                    <div className="relative px-3.5 py-1.5 rounded-full group-hover:bg-teal-500/8 dark:group-hover:bg-teal-400/10 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-colors duration-300">
+                      <svg
                         aria-hidden="true"
-                        className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-teal-500/12 via-blue-500/15 to-teal-500/20 dark:from-teal-400/15 dark:via-blue-400/20 dark:to-teal-400/20 transition-all duration-300 ease-out"
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-teal-500 to-blue-500 transition-all duration-300 ease-out"
-                      />
+                        className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+                      >
+                        <rect
+                          x="1"
+                          y="1"
+                          rx="14"
+                          ry="14"
+                          fill="none"
+                          pathLength={100}
+                          strokeWidth="1.75"
+                          strokeDasharray="100"
+                          style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
+                          className="stroke-teal-500 dark:stroke-teal-400 [stroke-dashoffset:100] group-hover:[stroke-dashoffset:0] opacity-0 group-hover:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                        />
+                      </svg>
                       <span className="relative z-10">Open Checklist</span>
                       <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
@@ -767,15 +776,24 @@ export const PlanPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden px-3.5 py-1.5 rounded-full border border-transparent group-hover:border-pink-500/45 dark:group-hover:border-pink-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-pink-500 dark:text-pink-400 transition-all duration-300">
-                <span
+              <div className="relative px-3.5 py-1.5 rounded-full group-hover:bg-pink-500/8 dark:group-hover:bg-pink-400/10 flex items-center gap-1.5 text-xs font-bold text-pink-500 dark:text-pink-400 transition-colors duration-300">
+                <svg
                   aria-hidden="true"
-                  className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-pink-500/12 via-purple-500/15 to-pink-500/20 transition-all duration-300 ease-out"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300 ease-out"
-                />
+                  className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
+                >
+                  <rect
+                    x="1"
+                    y="1"
+                    rx="14"
+                    ry="14"
+                    fill="none"
+                    pathLength={100}
+                    strokeWidth="1.75"
+                    strokeDasharray="100"
+                    style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
+                    className="stroke-pink-500 dark:stroke-pink-400 [stroke-dashoffset:100] group-hover:[stroke-dashoffset:0] opacity-0 group-hover:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                  />
+                </svg>
                 <span className="relative z-10">Open Custom Checklist</span>
                 <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
