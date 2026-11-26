@@ -718,9 +718,17 @@ export const PlanPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-500 dark:group-hover:text-teal-400 transition-colors">
-                      <span>Open Checklist</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    <div className="relative overflow-hidden px-3 py-1.5 rounded-full border border-transparent group-hover:border-teal-500/45 dark:group-hover:border-teal-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-teal-600 dark:group-hover:text-teal-300 transition-all duration-300">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-teal-500/12 via-blue-500/15 to-teal-500/20 dark:from-teal-400/15 dark:via-blue-400/20 dark:to-teal-400/20 transition-all duration-300 ease-out"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-teal-500 to-blue-500 transition-all duration-300 ease-out"
+                      />
+                      <span className="relative z-10">Open Checklist</span>
+                      <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </div>
@@ -759,9 +767,17 @@ export const PlanPage: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 text-xs font-bold text-pink-500">
-                <span>Open Custom Checklist</span>
-                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+              <div className="relative overflow-hidden px-3.5 py-1.5 rounded-full border border-transparent group-hover:border-pink-500/45 dark:group-hover:border-pink-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-pink-500 dark:text-pink-400 transition-all duration-300">
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-pink-500/12 via-purple-500/15 to-pink-500/20 transition-all duration-300 ease-out"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-300 ease-out"
+                />
+                <span className="relative z-10">Open Custom Checklist</span>
+                <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
               </div>
             </div>
           )}

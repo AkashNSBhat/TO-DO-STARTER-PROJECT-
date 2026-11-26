@@ -484,9 +484,17 @@ export const DailyPaperPlanner: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors">
-                      <span>Open Checklist</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                    <div className="relative overflow-hidden px-3 py-1.5 rounded-full border border-transparent group-hover:border-blue-500/45 dark:group-hover:border-blue-400/45 group-hover:shadow-sm flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-all duration-300">
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-0 left-0 w-0 group-hover:w-full bg-gradient-to-r from-blue-500/12 via-teal-500/15 to-blue-500/20 dark:from-blue-400/15 dark:via-teal-400/20 dark:to-blue-400/20 transition-all duration-300 ease-out"
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="absolute bottom-0 left-0 h-[2px] w-0 group-hover:w-full bg-gradient-to-r from-blue-500 to-teal-400 transition-all duration-300 ease-out"
+                      />
+                      <span className="relative z-10">Open Checklist</span>
+                      <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </div>
