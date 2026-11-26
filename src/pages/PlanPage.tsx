@@ -730,35 +730,9 @@ export const PlanPage: React.FC = () => {
                       </span>
                     </div>
 
-                    <div
-                      className={cn(
-                        "group/btn relative px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors duration-200",
-                        config.badgeBg,
-                        config.buttonHoverText
-                      )}
-                    >
-                      <svg
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
-                      >
-                        <rect
-                          x="1"
-                          y="1"
-                          rx="14"
-                          ry="14"
-                          fill="none"
-                          pathLength={100}
-                          strokeWidth="1.75"
-                          strokeDasharray="100"
-                          style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                          className={cn(
-                            "[stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out",
-                            config.buttonStroke
-                          )}
-                        />
-                      </svg>
-                      <span className="relative z-10">Open Checklist</span>
-                      <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+                    <div className="group/btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#242730] border border-slate-200 dark:border-[#343844] hover:border-blue-600 dark:hover:border-blue-400 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-150">
+                      <span>Open Checklist</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
                     </div>
                   </div>
                 </div>
@@ -797,35 +771,9 @@ export const PlanPage: React.FC = () => {
                 </div>
               </div>
 
-              <div
-                className={cn(
-                  "group/btn relative px-3.5 py-1.5 rounded-full flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors duration-200",
-                  CUSTOM_TILE_CONFIG.badgeBg,
-                  CUSTOM_TILE_CONFIG.buttonHoverText
-                )}
-              >
-                <svg
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
-                >
-                  <rect
-                    x="1"
-                    y="1"
-                    rx="14"
-                    ry="14"
-                    fill="none"
-                    pathLength={100}
-                    strokeWidth="1.75"
-                    strokeDasharray="100"
-                    style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                    className={cn(
-                      "[stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out",
-                      CUSTOM_TILE_CONFIG.buttonStroke
-                    )}
-                  />
-                </svg>
-                <span className="relative z-10">Open Custom Checklist</span>
-                <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
+              <div className="group/btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-slate-50 dark:bg-[#242730] border border-slate-200 dark:border-[#343844] hover:border-blue-600 dark:hover:border-blue-400 hover:bg-blue-50/60 dark:hover:bg-blue-500/10 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-all duration-150">
+                <span>Open Custom Checklist</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover/btn:translate-x-0.5 transition-transform" />
               </div>
             </div>
           )}
