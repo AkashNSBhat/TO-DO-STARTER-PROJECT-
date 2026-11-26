@@ -36,31 +36,12 @@ export type TileId = "priorities" | "schedule" | "tomorrow" | "dontForget";
 const DAYS_OF_WEEK = ["M", "T", "W", "TH", "F", "SA", "SU"];
 
 const DEFAULT_PLANNER_DATA: DailyPlannerData = {
-  selectedDay: "W",
-  topPriorities: [
-    { id: "p1", text: "Complete core architecture deliverables", completed: true },
-    { id: "p2", text: "Review user experience & UI animations", completed: true },
-    { id: "p3", text: "High-priority roadmap alignment", completed: false },
-  ],
-  scheduleItems: [
-    { id: "s1", text: "09:00 - Morning sync & standup agenda", completed: true },
-    { id: "s2", text: "10:30 - Deep focus: Feature engineering", completed: true },
-    { id: "s3", text: "13:00 - Lunch break & refresh", completed: true },
-    { id: "s4", text: "14:30 - Code review & test verification", completed: false },
-    { id: "s5", text: "16:30 - Architecture design & polish", completed: false },
-    { id: "s6", text: "18:00 - Daily retrospective & wrap-up", completed: false },
-  ],
-  forTomorrow: [
-    { id: "t1", text: "Draft next milestone implementation plan", completed: false },
-    { id: "t2", text: "Sync on offline database metrics", completed: false },
-    { id: "t3", text: "Verify automated test coverage", completed: false },
-  ],
-  dontForget: [
-    { id: "df1", text: "Export clean offline database backup", completed: true },
-    { id: "df2", text: "Check upcoming movie/series release dates", completed: false },
-    { id: "df3", text: "Stay hydrated and take breaks", completed: true },
-  ],
-  notes: "Ideas & Reminders:\n• Refined 4-tile popping dashboard with round checkboxes\n• Clean keyboard shortcuts and instant auto-save",
+  selectedDay: "M",
+  topPriorities: [],
+  scheduleItems: [],
+  forTomorrow: [],
+  dontForget: [],
+  notes: "",
 };
 
 const STORAGE_KEY = "daymark_daily_paper_planner_data_v1";

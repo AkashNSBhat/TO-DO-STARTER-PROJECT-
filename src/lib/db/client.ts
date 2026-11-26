@@ -151,7 +151,7 @@ export class DatabaseClient {
 
     return {
       greeting,
-      streakCount: parseInt(this.localData.appSettings.streak_count || "14", 10),
+      streakCount: parseInt(this.localData.appSettings.streak_count || "0", 10),
       yearProgressPct,
       monthProgressPct,
       metrics: {
@@ -294,15 +294,7 @@ export class DatabaseClient {
   static async getSubtasks(taskId: string): Promise<SubtaskDetail[]> {
     if (!this.isTauri()) {
       if (!this.localData.subtasksMap) {
-        this.localData.subtasksMap = {
-          "task-1": [
-            { id: "sub-1-1", taskId: "task-1", title: "Review IPC schema models", isCompleted: true, position: 0 },
-            { id: "sub-1-2", taskId: "task-1", title: "Test WAL mode pragma check", isCompleted: false, position: 1 },
-          ],
-          "task-2": [
-            { id: "sub-2-1", taskId: "task-2", title: "Write initial assertions", isCompleted: true, position: 0 },
-          ],
-        };
+        this.localData.subtasksMap = {};
       }
       return this.localData.subtasksMap[taskId] || [];
     }

@@ -45,7 +45,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutGrid },
-  { id: "tasks", label: "Daily Tasks", icon: CheckSquare, badge: "11" },
+  { id: "tasks", label: "Daily Tasks", icon: CheckSquare },
   { id: "discover", label: "Discover", icon: Compass, badge: "New" },
   { id: "movies", label: "Movies", icon: Film },
   { id: "series", label: "Series", icon: Tv },
@@ -82,23 +82,20 @@ const DRAWER_SECTIONS: Record<
         items: [
           {
             label: "Today's Agenda",
-            count: 6,
             active: true,
-            subtitle: "6 items scheduled • 2 due soon",
+            subtitle: "Plan and organize your day",
             icon: CalendarClock,
             targetTab: "plan",
           },
           {
             label: "Habit Streak",
-            count: "14d",
-            subtitle: "14-day active streak • Best run",
+            subtitle: "Track your daily consistency",
             icon: Flame,
             targetTab: "statistics",
           },
           {
             label: "Media Progress",
-            count: 3,
-            subtitle: "3 active • 2 series, 1 movie",
+            subtitle: "View your active movies & series",
             icon: Clapperboard,
             targetTab: "series",
           },
@@ -109,15 +106,13 @@ const DRAWER_SECTIONS: Record<
         items: [
           {
             label: "Priority Tasks",
-            count: 2,
-            subtitle: "2 high-priority tasks pending",
+            subtitle: "Manage your daily tasks",
             icon: Zap,
             targetTab: "tasks",
           },
           {
             label: "Watching Next",
-            count: 1,
-            subtitle: "1 title queued in watchlist",
+            subtitle: "Discover movies & series",
             icon: PlayCircle,
             targetTab: "discover",
           },
@@ -129,28 +124,19 @@ const DRAWER_SECTIONS: Record<
     title: "Projects",
     groups: [
       {
-        title: "Projects",
-        items: [
-          { label: "All projects", count: 3 },
-          { label: "Design system", count: 4, active: true },
-          { label: "User flow", count: 2 },
-          { label: "Ux research", count: 3 },
-        ],
-      },
-      {
         title: "Tasks",
         items: [
-          { label: "All tasks", count: 11 },
-          { label: "To do", count: 4 },
-          { label: "In progress", count: 4, active: true },
-          { label: "Done", count: 3 },
+          { label: "All tasks", active: true },
+          { label: "To do" },
+          { label: "In progress" },
+          { label: "Done" },
         ],
       },
       {
         title: "Smart Views",
         items: [
-          { label: "Upcoming", count: 5 },
-          { label: "Overdue", count: 0 },
+          { label: "Upcoming" },
+          { label: "Overdue" },
         ],
       },
     ],
@@ -182,18 +168,10 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Status",
         items: [
-          { label: "All Movies", count: 24 },
-          { label: "Watching", count: 2, active: true },
-          { label: "Planned", count: 4 },
-          { label: "Completed", count: 18 },
-        ],
-      },
-      {
-        title: "Genres",
-        items: [
-          { label: "Sci-Fi", count: 8 },
-          { label: "Drama", count: 6 },
-          { label: "Action", count: 5 },
+          { label: "All Movies", active: true },
+          { label: "Watching" },
+          { label: "Planned" },
+          { label: "Completed" },
         ],
       },
     ],
@@ -204,16 +182,9 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Status",
         items: [
-          { label: "Currently Watching", count: 3, active: true },
-          { label: "Plan to Watch", count: 2 },
-          { label: "Completed", count: 2 },
-        ],
-      },
-      {
-        title: "Seasons",
-        items: [
-          { label: "Severance S2", count: "8/10" },
-          { label: "Shogun S1", count: "6/10" },
+          { label: "Currently Watching", active: true },
+          { label: "Plan to Watch" },
+          { label: "Completed" },
         ],
       },
     ],
@@ -224,16 +195,9 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Ledger",
         items: [
-          { label: "All Completed", count: 20, active: true },
-          { label: "Movies Archive", count: 18 },
-          { label: "Series Archive", count: 2 },
-        ],
-      },
-      {
-        title: "Timeline",
-        items: [
-          { label: "2026 Watched", count: 12 },
-          { label: "Historical Records", count: 8 },
+          { label: "All Completed", active: true },
+          { label: "Movies Archive" },
+          { label: "Series Archive" },
         ],
       },
     ],
@@ -244,17 +208,17 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Horizons",
         items: [
-          { label: "Weekly Cycle", count: "W47", active: true },
-          { label: "Monthly Goals", count: "Nov" },
-          { label: "2026 Roadmap", count: "Year" },
+          { label: "Weekly Cycle", active: true },
+          { label: "Monthly Goals" },
+          { label: "Yearly Roadmap" },
         ],
       },
       {
         title: "Categories",
         items: [
-          { label: "Projects", count: 5 },
-          { label: "Learning", count: 2 },
-          { label: "Entertainment", count: 3 },
+          { label: "Projects" },
+          { label: "Learning" },
+          { label: "Entertainment" },
         ],
       },
     ],
@@ -265,9 +229,9 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Feed Filter",
         items: [
-          { label: "All Completions", count: 50, active: true },
-          { label: "Daily Tasks", count: 42 },
-          { label: "Entertainment", count: 8 },
+          { label: "All Completions", active: true },
+          { label: "Daily Tasks" },
+          { label: "Entertainment" },
         ],
       },
     ],
@@ -279,7 +243,7 @@ const DRAWER_SECTIONS: Record<
         title: "Metrics",
         items: [
           { label: "Productivity", active: true },
-          { label: "Entertainment", count: "142h" },
+          { label: "Entertainment" },
           { label: "90-Day Heatmap" },
         ],
       },
