@@ -484,7 +484,7 @@ export const DailyPaperPlanner: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="relative px-3.5 py-1.5 rounded-full group-hover:bg-blue-500/8 dark:group-hover:bg-blue-400/10 flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors duration-300">
+                    <div className="group/btn relative px-3.5 py-1.5 rounded-full bg-slate-100/90 dark:bg-[#222631] flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-200">
                       <svg
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 w-full h-full overflow-visible"
@@ -499,11 +499,11 @@ export const DailyPaperPlanner: React.FC = () => {
                           strokeWidth="1.75"
                           strokeDasharray="100"
                           style={{ width: "calc(100% - 2px)", height: "calc(100% - 2px)" }}
-                          className="stroke-blue-500 dark:stroke-blue-400 [stroke-dashoffset:100] group-hover:[stroke-dashoffset:0] opacity-0 group-hover:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
+                          className="stroke-blue-500 dark:stroke-blue-400 [stroke-dashoffset:100] group-hover/btn:[stroke-dashoffset:0] opacity-0 group-hover/btn:opacity-100 transition-[stroke-dashoffset,opacity] duration-500 ease-out"
                         />
                       </svg>
                       <span className="relative z-10">Open Checklist</span>
-                      <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="relative z-10 w-3.5 h-3.5 group-hover/btn:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </div>
