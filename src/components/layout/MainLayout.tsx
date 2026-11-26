@@ -28,7 +28,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-charcoal-900 text-slate-900 dark:text-slate-100 transition-colors duration-150 relative">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#f6f8fc] dark:bg-charcoal-900 text-slate-900 dark:text-[#e8eaed] transition-colors duration-150 relative">
       {/* Mobile Backdrop Overlay */}
       {isMobileMenuOpen && (
         <div
@@ -71,7 +71,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onOpenApkModal={() => setIsApkModalOpen(true)}
         />
 
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-6 bg-slate-50 dark:bg-charcoal-900 transition-colors">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-6 bg-[#f6f8fc] dark:bg-charcoal-900 transition-colors">
           <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>

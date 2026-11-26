@@ -8,29 +8,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Modern Figma-inspired deep surfaces & elevations
+        // Balanced Google-style dark slate surfaces (no harsh pitch-black)
         charcoal: {
-          950: "#0e1013", // Ultra-deep background
-          900: "#131518", // App canvas background
-          850: "#16181d", // Icon rail / deep sidebar
-          800: "#1b1d22", // Contextual drawer / panel
-          750: "#21242b", // Card container surface
-          700: "#282c35", // Card hover / elevated surface
-          600: "#2e323d", // Card & divider borders
-          500: "#454b5b", // Border active / muted text
+          950: "#14161a", // Deepest contrast frame
+          900: "#1b1d21", // App canvas background
+          850: "#202227", // Icon rail / deep sidebar
+          800: "#24272e", // Card & drawer surface
+          750: "#2a2e36", // Elevated container surface
+          700: "#30353f", // Card hover / elevated surface
+          600: "#3c414d", // Card & divider borders
+          500: "#5f6573", // Border active / muted text
         },
-        // Modern Royal Blue & Figma Palette
+        // Clean Enterprise Blue Palette
         primary: {
-          50: "#eef2ff",
-          100: "#e0e7ff",
-          200: "#c7d2fe",
-          300: "#a5b4fc",
-          400: "#818cf8",
-          500: "#4f6bf7",
-          600: "#3b66ff", // Primary brand button & active state
-          700: "#2b54e6",
-          800: "#1e42d0",
-          900: "#1530a6",
+          50: "#e8f0fe",
+          100: "#d2e3fc",
+          200: "#aecbfa",
+          300: "#8ab4f8",
+          400: "#669df6",
+          500: "#4285f4",
+          600: "#1a73e8", // Primary brand button & active state
+          700: "#1967d2",
+          800: "#185abc",
+          900: "#174ea6",
         },
         // Progress & Status Accents
         tangerine: {

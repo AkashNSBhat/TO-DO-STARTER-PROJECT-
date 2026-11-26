@@ -3,56 +3,56 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light Mode Figma Tokens */
+  /* Light Mode (Clean Google / Enterprise Palette) */
   :root {
-    --bg-primary: #f5f6fa;
+    --bg-primary: #f6f8fc;
     --bg-secondary: #ffffff;
-    --bg-tertiary: #edf0f7;
-    --border-subtle: #eaecee;
-    --text-primary: #111827;
-    --text-secondary: #64748b;
-    --text-muted: #94a3b8;
+    --bg-tertiary: #eef2f6;
+    --border-subtle: #e2e8f0;
+    --text-primary: #1f2937;
+    --text-secondary: #4b5563;
+    --text-muted: #6b7280;
     
     /* Accents */
-    --accent: #3b66ff;
-    --accent-hover: #2b54e6;
-    --accent-light: rgba(59, 102, 255, 0.12);
-    --accent-blue: #3b66ff;
-    --accent-teal: #3b66ff;
-    --accent-orange: #ff783e;
-    --accent-emerald: #22c55e;
-    --accent-violet: #6366f1;
-    --accent-amber: #f59e0b;
+    --accent: #1a73e8;
+    --accent-hover: #1557b0;
+    --accent-light: rgba(26, 115, 232, 0.1);
+    --accent-blue: #1a73e8;
+    --accent-teal: #1a73e8;
+    --accent-orange: #ea580c;
+    --accent-emerald: #16a34a;
+    --accent-violet: #4f46e5;
+    --accent-amber: #d97706;
 
     /* Card & chrome */
     --card-bg: #ffffff;
-    --card-border: #eaedf2;
+    --card-border: #e2e8f0;
   }
 
-  /* Dark Mode Reference Figma Tokens */
+  /* Dark Mode (Balanced Google Material / Chrome Slate Palette) */
   .dark {
-    --bg-primary: #131518;
-    --bg-secondary: #1a1c22;
-    --bg-tertiary: #21242b;
-    --border-subtle: #2c3038;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --bg-primary: #1b1d21;
+    --bg-secondary: #22252b;
+    --bg-tertiary: #292d35;
+    --border-subtle: #343944;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --text-muted: #787f89;
 
     /* Accents */
-    --accent: #3b66ff;
-    --accent-hover: #2b54e6;
-    --accent-light: rgba(59, 102, 255, 0.15);
-    --accent-blue: #3b66ff;
-    --accent-teal: #3b66ff;
-    --accent-orange: #ff783e;
-    --accent-emerald: #22c55e;
-    --accent-violet: #6366f1;
-    --accent-amber: #f59e0b;
+    --accent: #1a73e8;
+    --accent-hover: #1765cc;
+    --accent-light: rgba(138, 180, 248, 0.14);
+    --accent-blue: #8ab4f8;
+    --accent-teal: #8ab4f8;
+    --accent-orange: #fb923c;
+    --accent-emerald: #4ade80;
+    --accent-violet: #818cf8;
+    --accent-amber: #fbbf24;
 
     /* Card & chrome */
-    --card-bg: #21242b;
-    --card-border: #2c3038;
+    --card-bg: #24272e;
+    --card-border: #343944;
   }
 
   html {
@@ -96,17 +96,17 @@
   color: inherit;
 }
 
-/* Figma Electric Royal Blue Button Theme */
+/* Clean Enterprise Primary Blue Button Theme */
 button.bg-teal-500,
 .bg-teal-500 {
-  background-color: #3b66ff !important;
+  background-color: #1a73e8 !important;
   color: #ffffff !important;
 }
 button.bg-teal-500:hover,
 .bg-teal-500:hover {
-  background-color: #2b54e6 !important;
+  background-color: #1557b0 !important;
 }
 button.bg-teal-500:active,
 .bg-teal-500:active {
-  background-color: #1e42d0 !important;
+  background-color: #124894 !important;
 }

@@ -338,14 +338,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex h-screen select-none z-20 shrink-0">
       {/* ========================================================= */}
-      {/* 1. SLIM LEFT ICON RAIL (Clean Google/Enterprise Style)    */}
+      {/* 1. SLIM LEFT ICON RAIL (Light & Dark Mode Adaptive)       */}
       {/* ========================================================= */}
-      <aside className="w-16 h-screen bg-white dark:bg-[#16181d] border-r border-slate-200 dark:border-[#262932] flex flex-col items-center justify-between py-4 shrink-0 transition-colors">
+      <aside className="w-16 h-screen bg-slate-100/95 dark:bg-[#11151d] border-r border-slate-200/90 dark:border-[#1f2430] flex flex-col items-center justify-between py-4 shrink-0 transition-colors">
         {/* App Cube Logo */}
         <div className="flex flex-col items-center gap-6">
           <div
             onClick={() => onSelectTab("dashboard")}
-            className="w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-white shadow-sm cursor-pointer hover:scale-105 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/25 cursor-pointer hover:scale-105 active:scale-95 transition-all"
             title="DAYMARK — Every day counts"
           >
             <Box className="w-5 h-5 text-white" />
@@ -363,20 +363,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={item.label}
                     aria-label={item.label}
                     className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer relative",
+                      "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer relative",
                       isActive
-                        ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                        : "text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-[#22252e]"
+                        ? "bg-teal-500/12 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 shadow-xs border border-teal-500/30 dark:border-teal-400/30"
+                        : "text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-teal-500/10 dark:hover:bg-teal-500/15"
                     )}
                   >
-                    <Icon className="w-5 h-5 shrink-0 transition-transform duration-150 ease-out group-hover:scale-[1.12]" />
+                    <Icon className="w-5 h-5 shrink-0 transition-transform duration-200 ease-out group-hover:scale-[1.15]" />
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-600 dark:bg-blue-400 rounded-r-full" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-teal-600 dark:bg-teal-400 rounded-r-full" />
                     )}
                   </button>
 
                   {/* Tooltip on hover */}
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md bg-slate-900 dark:bg-[#262932] text-white text-xs font-medium border border-slate-800 dark:border-[#343844] shadow-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
                     {item.label}
                   </div>
                 </div>
@@ -394,6 +394,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               dbPingMs !== undefined ? ` (${dbPingMs}ms)` : ""
             }`}
           >
+            {dbConnected && (
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            )}
             <span
               className={cn(
                 "relative inline-flex rounded-full h-2 w-2",
@@ -405,7 +408,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Drawer Expand/Collapse Button */}
           <button
             onClick={onToggleCollapse}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-[#22252e] hover:scale-105 transition-all cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-teal-500/10 dark:hover:bg-teal-500/15 hover:scale-110 transition-all cursor-pointer"
             title={collapsed ? "Expand drawer" : "Collapse drawer"}
             aria-label="Toggle sidebar drawer"
           >
@@ -419,7 +422,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </aside>
 
       {/* ========================================================= */}
-      {/* 2. CONTEXTUAL DRAWER (Clean Enterprise Expandable Column) */}
+      {/* 2. CONTEXTUAL DRAWER (Contained Inside-Box Wave Sidebar)  */}
       {/* ========================================================= */}
       {!collapsed && (() => {
         let runningFlatIndex = 0;
@@ -427,17 +430,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return (
           <aside
             onMouseLeave={() => setHoveredItemIndex(null)}
-            className="relative w-60 h-screen bg-[#fafafa] dark:bg-[#1b1d22] border-r border-slate-200 dark:border-[#262932] flex flex-col justify-between transition-colors duration-200 shrink-0 overflow-hidden z-20"
+            className="relative w-60 h-screen bg-white dark:bg-[#191b20] border-r border-slate-200 dark:border-[#282c35] flex flex-col justify-between transition-all duration-300 shrink-0 overflow-hidden z-20"
           >
             <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 space-y-5">
               {/* Top Drawer Title with Action */}
-              <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80 dark:border-[#262932]">
-                <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 tracking-tight">
                   {drawerData.title}
                 </h2>
                 <button
                   onClick={() => onSelectTab("tasks")}
-                  className="w-7 h-7 rounded-lg bg-white dark:bg-[#242730] border border-slate-200 dark:border-[#343844] hover:border-blue-600 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-blue-500 hover:text-white text-slate-500 dark:text-slate-400 flex items-center justify-center text-xs transition-colors cursor-pointer"
                   title="Quick Add"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -485,9 +488,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           hoveredItemIndex !== null
                             ? Math.abs(flatIdx - hoveredItemIndex)
                             : null;
-                          const isHovered = distance === 0;
-                          const isNearWave = distance === 1;
-                          const ItemIcon = it.icon || Sparkles;
+                        const isHovered = distance === 0;
+                        const isNearWave = distance === 1;
+                        const isOuterWave = distance === 2;
+                        const ItemIcon = it.icon || Sparkles;
 
                         const expandedSubtitle =
                           it.subtitle ||
@@ -507,42 +511,67 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             }}
                             onMouseEnter={() => setHoveredItemIndex(flatIdx)}
                             className={cn(
-                              "w-full flex flex-col rounded-lg relative overflow-hidden cursor-pointer text-left transition-all duration-200 ease-out",
+                              "w-full flex flex-col rounded-xl relative overflow-hidden cursor-pointer text-left transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                               isHovered
-                                ? "py-2.5 px-3 bg-white dark:bg-[#242730] border border-slate-200 dark:border-[#343844] shadow-sm"
+                                ? "py-3 px-3 bg-gradient-to-br from-blue-500/12 via-teal-500/12 to-indigo-500/15 dark:from-[#1f2c3f] dark:via-[#1a2f3d] dark:to-[#222840] border border-blue-400/45 dark:border-teal-400/45 shadow-md shadow-teal-500/10"
                                 : isNearWave
-                                  ? "py-1.5 px-2.5 pl-3 bg-slate-100/80 dark:bg-[#20232b] text-slate-800 dark:text-slate-100"
-                                  : isSelected
-                                    ? "py-1.5 px-2.5 bg-blue-50/80 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                                    : "py-1.5 px-2.5 text-slate-600 dark:text-slate-400"
+                                  ? "py-2 px-3 pl-3.5 bg-slate-100/75 dark:bg-[#222631] text-slate-800 dark:text-slate-100"
+                                  : isOuterWave
+                                    ? "py-1.5 px-2.5 pl-3 text-slate-600 dark:text-slate-300"
+                                    : isSelected
+                                      ? "py-1.5 px-2.5 bg-slate-100/80 dark:bg-[#22252e] text-blue-600 dark:text-blue-400"
+                                      : "py-1.5 px-2.5 text-slate-500 dark:text-slate-400"
                             )}
                           >
-                            <div className="w-full flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Internal Wave Backdrop SVG strictly inside the item box */}
+                            {isHovered && (
+                              <svg
+                                aria-hidden="true"
+                                viewBox="0 0 220 64"
+                                preserveAspectRatio="none"
+                                className="pointer-events-none absolute inset-0 w-full h-full opacity-45 dark:opacity-35"
+                              >
+                                <path
+                                  d="M0 44 Q 55 18, 110 38 T 220 26 L 220 64 L 0 64 Z"
+                                  className="fill-blue-400/25 dark:fill-teal-400/25"
+                                />
+                                <path
+                                  d="M0 52 Q 70 28, 140 46 T 220 38 L 220 64 L 0 64 Z"
+                                  className="fill-indigo-400/20 dark:fill-blue-400/20"
+                                />
+                              </svg>
+                            )}
+
+                            <div className="relative z-10 w-full flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 min-w-0">
                                 <span
                                   className={cn(
-                                    "rounded-md flex items-center justify-center shrink-0 transition-all duration-200",
+                                    "rounded-lg flex items-center justify-center shrink-0 transition-all duration-300",
                                     isHovered
-                                      ? "w-7 h-7 bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400"
-                                      : isSelected
-                                        ? "w-5 h-5 text-blue-600 dark:text-blue-400"
-                                        : "w-5 h-5 text-slate-400 dark:text-slate-500"
+                                      ? "w-7 h-7 bg-blue-500/15 dark:bg-teal-400/20 text-blue-600 dark:text-teal-300 scale-110"
+                                      : isNearWave
+                                        ? "w-6 h-6 bg-slate-200/70 dark:bg-slate-800 text-slate-700 dark:text-slate-200 scale-105"
+                                        : isSelected
+                                          ? "w-5 h-5 bg-blue-500/10 text-blue-500 dark:text-blue-400"
+                                          : "w-5 h-5 bg-slate-100 dark:bg-slate-800/70 text-slate-400 dark:text-slate-500"
                                   )}
                                 >
                                   <ItemIcon
                                     className={cn(
-                                      "transition-all duration-200",
-                                      isHovered ? "w-4 h-4" : "w-3.5 h-3.5"
+                                      "transition-all duration-300",
+                                      isHovered ? "w-4 h-4" : "w-3 h-3"
                                     )}
                                   />
                                 </span>
 
                                 <span
                                   className={cn(
-                                    "truncate transition-all duration-200",
+                                    "truncate transition-all duration-300",
                                     isHovered
-                                      ? "text-[13px] font-semibold text-slate-900 dark:text-white"
-                                      : "text-xs font-medium"
+                                      ? "text-[13px] font-bold text-blue-700 dark:text-teal-300 tracking-tight"
+                                      : isNearWave
+                                        ? "text-xs font-semibold text-slate-800 dark:text-slate-200"
+                                        : "text-[11px] font-medium"
                                   )}
                                 >
                                   {it.label}
@@ -552,31 +581,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                               {it.count !== undefined && (
                                 <span
                                   className={cn(
-                                    "text-[11px] font-medium px-1.5 py-0.5 rounded-md shrink-0 transition-colors duration-200",
+                                    "font-semibold px-1.5 py-0.5 rounded-full shrink-0 transition-all duration-300",
                                     isHovered
-                                      ? "bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 font-semibold"
+                                      ? "text-[11px] bg-blue-500/15 dark:bg-teal-400/20 text-blue-700 dark:text-teal-300"
                                       : isSelected
-                                        ? "text-blue-600 dark:text-blue-400"
-                                        : "text-slate-400 dark:text-slate-500"
+                                        ? "text-[10px] bg-blue-500/10 text-blue-500 dark:text-blue-400"
+                                        : "text-[10px] text-slate-400 dark:text-slate-500"
                                   )}
                                 >
-                                  {it.count}
+                                  ({it.count})
                                 </span>
                               )}
                             </div>
 
-                            {/* Clean Expanded Detail Row on Hover */}
+                            {/* Big Wave Expanded Detail Row inside the box */}
                             <div
                               className={cn(
-                                "overflow-hidden transition-all duration-200 ease-out",
+                                "relative z-10 overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
                                 isHovered
-                                  ? "max-h-8 opacity-100 mt-1 pl-9"
+                                  ? "max-h-10 opacity-100 mt-1.5 pl-9"
                                   : "max-h-0 opacity-0 mt-0 pl-7"
                               )}
                             >
-                              <span className="block truncate text-[11px] text-slate-500 dark:text-slate-400">
-                                {expandedSubtitle}
-                              </span>
+                              <div className="flex items-center gap-1.5 text-[10px] font-medium text-blue-600/85 dark:text-teal-300/90">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-teal-400 animate-pulse shrink-0" />
+                                <span className="truncate">{expandedSubtitle}</span>
+                              </div>
                             </div>
                           </button>
                         );
@@ -589,7 +619,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             {/* Drawer Footer Branding */}
-            <div className="p-3 border-t border-slate-200/80 dark:border-[#262932] flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+            <div className="p-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
               <span className="font-semibold text-slate-700 dark:text-slate-300">DAYMARK</span>
               <span>v0.1.0</span>
             </div>
