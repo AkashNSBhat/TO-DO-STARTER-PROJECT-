@@ -320,7 +320,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const [activeSubItem, setActiveSubItem] = useState<string>("Today's Agenda");
   const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const drawerData = DRAWER_SECTIONS[currentTab];
+
+  const toggleGroup = (groupKey: string) => {
+    setHoveredItemIndex(null);
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
+  };
 
   useEffect(() => {
     setHoveredItemIndex(null);
@@ -436,18 +445,39 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
               {/* Contained Wave-Reactive Navigation Groups */}
               <div className="space-y-4">
-                {drawerData.groups.map((group, gIdx) => (
-                  <div key={gIdx} className="space-y-1">
-                    {group.title && (
-                      <div className="flex items-center justify-between px-2 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                        <span>{group.title}</span>
-                        <ChevronDown className="w-3 h-3 text-slate-400" />
-                      </div>
-                    )}
+                {drawerData.groups.map((group, gIdx) => {
+                  const groupKey = `${currentTab}:${group.title || gIdx}`;
+                  const isGroupCollapsed = !!collapsedGroups[groupKey];
 
-                    <div className="space-y-1 relative">
-                      {group.items.map((it, idx) => {
-                        const flatIdx = runningFlatIndex++;
+                  return (
+                    <div key={gIdx} className="space-y-1">
+                      {group.title && (
+                        <button
+                          type="button"
+                          onClick={() => toggleGroup(groupKey)}
+                          aria-expanded={!isGroupCollapsed}
+                          className="w-full flex items-center justify-between px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100/70 dark:hover:bg-slate-800/40 uppercase tracking-wider transition-colors cursor-pointer"
+                        >
+                          <span>{group.title}</span>
+                          <ChevronDown
+                            className={cn(
+                              "w-3.5 h-3.5 text-slate-400 transition-transform duration-200",
+                              isGroupCollapsed && "-rotate-90"
+                            )}
+                          />
+                        </button>
+                      )}
+
+                      <div
+                        className={cn(
+                          "space-y-1 relative overflow-hidden transition-all duration-300 ease-out",
+                          isGroupCollapsed
+                            ? "max-h-0 opacity-0 pointer-events-none"
+                            : "max-h-[600px] opacity-100"
+                        )}
+                      >
+                        {group.items.map((it, idx) => {
+                          const flatIdx = runningFlatIndex++;
                         const isSelected =
                           activeSubItem === it.label || (!activeSubItem && it.active);
                         const distance =
@@ -576,10 +606,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             </div>
                           </button>
                         );
-                      })}
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
