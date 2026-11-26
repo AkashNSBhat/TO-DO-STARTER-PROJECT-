@@ -342,17 +342,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* ========================================================= */}
       <aside className="w-16 h-screen bg-slate-100/95 dark:bg-[#11151d] border-r border-slate-200/90 dark:border-[#1f2430] flex flex-col items-center justify-between py-4 shrink-0 transition-colors">
         {/* App Cube Logo */}
-        <div className="flex flex-col items-center gap-5">
+        <div className="flex flex-col items-center gap-6">
           <div
             onClick={() => onSelectTab("dashboard")}
-            className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/25 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/25 cursor-pointer hover:scale-105 active:scale-95 transition-all"
             title="DAYMARK — Every day counts"
           >
-            <Box className="w-[22px] h-[22px] text-white" />
+            <Box className="w-5 h-5 text-white" />
           </div>
 
           {/* Icon Navigation Dock */}
-          <nav className="flex flex-col items-center gap-1.5">
+          <nav className="flex flex-col items-center gap-2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
@@ -363,13 +363,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     title={item.label}
                     aria-label={item.label}
                     className={cn(
-                      "w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer relative",
+                      "w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer relative",
                       isActive
                         ? "bg-teal-500/12 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 shadow-xs border border-teal-500/30 dark:border-teal-400/30"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-teal-200 hover:bg-slate-200/70 dark:hover:bg-slate-800/70"
+                        : "text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-teal-500/10 dark:hover:bg-teal-500/15"
                     )}
                   >
-                    <Icon className="w-[22px] h-[22px] shrink-0" />
+                    <Icon className="w-5 h-5 shrink-0 transition-transform duration-200 ease-out group-hover:scale-[1.15]" />
                     {isActive && (
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-teal-600 dark:bg-teal-400 rounded-r-full" />
                     )}
@@ -408,14 +408,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Drawer Expand/Collapse Button */}
           <button
             onClick={onToggleCollapse}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 hover:bg-teal-500/10 dark:hover:bg-teal-500/15 hover:scale-110 transition-all cursor-pointer"
             title={collapsed ? "Expand drawer" : "Collapse drawer"}
             aria-label="Toggle sidebar drawer"
           >
             {collapsed ? (
-              <ChevronRight className="w-[18px] h-[18px]" />
+              <ChevronRight className="w-4 h-4" />
             ) : (
-              <ChevronLeft className="w-[18px] h-[18px]" />
+              <ChevronLeft className="w-4 h-4" />
             )}
           </button>
         </div>
