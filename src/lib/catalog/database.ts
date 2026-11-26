@@ -209,19 +209,12 @@ export class CatalogueDatabase {
       });
     }
 
-    // 3. Filter by Language
+    // 3. Filter by Original Language (strictly match selected language)
     if (options.language && options.language !== "all") {
       const lang = options.language.toLowerCase();
-      results = results.filter((item) => {
-        if (item.originalLanguage.toLowerCase() === lang) return true;
-        if (
-          item.languages &&
-          item.languages.some((l) => l.languageCode.toLowerCase() === lang)
-        ) {
-          return true;
-        }
-        return false;
-      });
+      results = results.filter(
+        (item) => item.originalLanguage.toLowerCase() === lang
+      );
     }
 
     // 4. Filter by Genre
