@@ -338,21 +338,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div className="flex h-screen select-none z-20 shrink-0">
       {/* ========================================================= */}
-      {/* 1. SLIM LEFT ICON RAIL (Exact Figma Style)                */}
+      {/* 1. SLIM LEFT ICON RAIL (Light & Dark Mode Adaptive)       */}
       {/* ========================================================= */}
-      <aside className="w-16 h-screen bg-[#14161a] border-r border-[#22252c] flex flex-col items-center justify-between py-4 shrink-0 transition-colors">
+      <aside className="w-16 h-screen bg-slate-100/95 dark:bg-[#11151d] border-r border-slate-200/90 dark:border-[#1f2430] flex flex-col items-center justify-between py-4 shrink-0 transition-colors">
         {/* App Cube Logo */}
-        <div className="flex flex-col items-center gap-6">
+        <div className="flex flex-col items-center gap-5">
           <div
             onClick={() => onSelectTab("dashboard")}
-            className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+            className="w-11 h-11 rounded-xl bg-gradient-to-br from-teal-500 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-teal-500/25 cursor-pointer hover:scale-105 active:scale-95 transition-all"
             title="DAYMARK — Every day counts"
           >
-            <Box className="w-5 h-5 text-white" />
+            <Box className="w-[22px] h-[22px] text-white" />
           </div>
 
           {/* Icon Navigation Dock */}
-          <nav className="flex flex-col items-center gap-2">
+          <nav className="flex flex-col items-center gap-1.5">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = currentTab === item.id;
@@ -365,18 +365,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={cn(
                       "w-11 h-11 rounded-xl flex items-center justify-center transition-all cursor-pointer relative",
                       isActive
-                        ? "bg-[#252830] text-blue-400 shadow-sm border border-slate-700/50"
-                        : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+                        ? "bg-teal-500/12 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 shadow-xs border border-teal-500/30 dark:border-teal-400/30"
+                        : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-teal-200 hover:bg-slate-200/70 dark:hover:bg-slate-800/70"
                     )}
                   >
-                    <Icon className="w-5 h-5 shrink-0" />
+                    <Icon className="w-[22px] h-[22px] shrink-0" />
                     {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-blue-500 rounded-r-full" />
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-teal-600 dark:bg-teal-400 rounded-r-full" />
                     )}
                   </button>
 
                   {/* Tooltip on hover */}
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md bg-slate-900 text-slate-100 text-xs font-medium border border-slate-700 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-md bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
                     {item.label}
                   </div>
                 </div>
@@ -408,11 +408,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {/* Drawer Expand/Collapse Button */}
           <button
             onClick={onToggleCollapse}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             title={collapsed ? "Expand drawer" : "Collapse drawer"}
             aria-label="Toggle sidebar drawer"
           >
-            {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            {collapsed ? (
+              <ChevronRight className="w-[18px] h-[18px]" />
+            ) : (
+              <ChevronLeft className="w-[18px] h-[18px]" />
+            )}
           </button>
         </div>
       </aside>
