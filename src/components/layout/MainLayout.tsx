@@ -12,12 +12,14 @@ import { cn } from "../../lib/utils";
 interface MainLayoutProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
+  onSelectDiscoverFilter?: (filter: { mediaType?: "movie" | "series"; language?: string }) => void;
   children: React.ReactNode;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
   currentTab,
   onSelectTab,
+  onSelectDiscoverFilter,
   children,
 }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -48,6 +50,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           currentTab={currentTab}
           onSelectTab={(tab) => {
             onSelectTab(tab);
+            setIsMobileMenuOpen(false);
+          }}
+          onSelectDiscoverFilter={(filter) => {
+            onSelectDiscoverFilter?.(filter);
             setIsMobileMenuOpen(false);
           }}
           collapsed={collapsed}

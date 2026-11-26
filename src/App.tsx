@@ -15,6 +15,11 @@ import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 export const App: React.FC = () => {
   const [currentTab, setCurrentTab] = useState<NavTab>("dashboard");
+  const [discoverPreset, setDiscoverPreset] = useState<{
+    mediaType?: "movie" | "series";
+    language?: string;
+    key: number;
+  }>({ key: 0 });
 
   const renderContent = () => {
     switch (currentTab) {
@@ -29,7 +34,7 @@ export const App: React.FC = () => {
       case "tasks":
         return <TasksPage />;
       case "discover":
-        return <DiscoverPage />;
+        return <DiscoverPage externalFilter={discoverPreset} />;
       case "movies":
         return <MoviesPage />;
       case "series":
@@ -56,7 +61,17 @@ export const App: React.FC = () => {
   };
 
   return (
-    <MainLayout currentTab={currentTab} onSelectTab={setCurrentTab}>
+    <MainLayout
+      currentTab={currentTab}
+      onSelectTab={setCurrentTab}
+      onSelectDiscoverFilter={(filter) => {
+        setDiscoverPreset({
+          ...filter,
+          key: Date.now(),
+        });
+        setCurrentTab("discover");
+      }}
+    >
       <ErrorBoundary onReset={() => setCurrentTab("dashboard")}>
         {renderContent()}
       </ErrorBoundary>

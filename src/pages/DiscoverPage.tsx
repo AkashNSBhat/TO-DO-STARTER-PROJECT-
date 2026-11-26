@@ -20,7 +20,15 @@ import { DiscoverFilters } from "../components/discover/DiscoverFilters";
 import { DiscoverDetailModal } from "../components/discover/DiscoverDetailModal";
 import { CatalogueManagerModal } from "../components/discover/CatalogueManagerModal";
 
-export const DiscoverPage: React.FC = () => {
+export interface DiscoverPageProps {
+  externalFilter?: {
+    mediaType?: CatalogMediaType;
+    language?: string;
+    key: number;
+  };
+}
+
+export const DiscoverPage: React.FC<DiscoverPageProps> = ({ externalFilter }) => {
   const [activeTab, setActiveTab] = useState<CatalogMediaType>("movie");
   const [items, setItems] = useState<MediaCatalogItem[]>([]);
   const [metadata, setMetadata] = useState<CatalogMetadata | null>(null);
@@ -37,6 +45,24 @@ export const DiscoverPage: React.FC = () => {
     releaseYearDecade: undefined,
     sortBy: "rating",
   });
+
+  // Sync external sidebar filter selections (e.g. clicking English/Hindi/Kannada/German or Movies/Series)
+  useEffect(() => {
+    if (!externalFilter || externalFilter.key === 0) return;
+    if (externalFilter.mediaType) {
+      setActiveTab(externalFilter.mediaType);
+      setFilters((prev) => ({
+        ...prev,
+        mediaType: externalFilter.mediaType!,
+      }));
+    }
+    if (externalFilter.language !== undefined) {
+      setFilters((prev) => ({
+        ...prev,
+        language: externalFilter.language,
+      }));
+    }
+  }, [externalFilter]);
 
   // Load catalog metadata on mount
   useEffect(() => {

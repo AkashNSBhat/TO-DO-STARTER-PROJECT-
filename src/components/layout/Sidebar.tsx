@@ -70,6 +70,7 @@ const DRAWER_SECTIONS: Record<
         subtitle?: string;
         icon?: React.ComponentType<{ className?: string }>;
         targetTab?: NavTab;
+        discoverFilter?: { mediaType?: "movie" | "series"; language?: string };
       }>;
     }>;
   }
@@ -147,17 +148,17 @@ const DRAWER_SECTIONS: Record<
       {
         title: "Media Categories",
         items: [
-          { label: "Movies Catalogue", count: "5,000+", active: true },
-          { label: "Series & Shows", count: "5,000+" },
+          { label: "Movies Catalogue", count: "5,000+", active: true, discoverFilter: { mediaType: "movie" } },
+          { label: "Series & Shows", count: "5,000+", discoverFilter: { mediaType: "series" } },
         ],
       },
       {
         title: "Languages",
         items: [
-          { label: "English", count: "Global" },
-          { label: "Hindi (हिंदी)", count: "Popular" },
-          { label: "Kannada (ಕನ್ನಡ)", count: "Regional" },
-          { label: "German (Deutsch)", count: "European" },
+          { label: "English", count: "Global", discoverFilter: { language: "en" } },
+          { label: "Hindi (हिंदी)", count: "Popular", discoverFilter: { language: "hi" } },
+          { label: "Kannada (ಕನ್ನಡ)", count: "Regional", discoverFilter: { language: "kn" } },
+          { label: "German (Deutsch)", count: "European", discoverFilter: { language: "de" } },
         ],
       },
     ],
@@ -268,6 +269,7 @@ const DRAWER_SECTIONS: Record<
 interface SidebarProps {
   currentTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
+  onSelectDiscoverFilter?: (filter: { mediaType?: "movie" | "series"; language?: string }) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   dbConnected: boolean;
@@ -277,6 +279,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   currentTab,
   onSelectTab,
+  onSelectDiscoverFilter,
   collapsed,
   onToggleCollapse,
   dbConnected,
@@ -469,6 +472,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             type="button"
                             onClick={() => {
                               setActiveSubItem(it.label);
+                              if (it.discoverFilter && onSelectDiscoverFilter) {
+                                onSelectDiscoverFilter(it.discoverFilter);
+                              }
                               if (it.targetTab) {
                                 onSelectTab(it.targetTab);
                               }
